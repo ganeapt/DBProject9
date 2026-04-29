@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3307
--- Generation Time: Apr 29, 2026 at 01:08 AM
+-- Generation Time: Apr 29, 2026 at 03:08 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -52,6 +52,43 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `EfectueazaTransfer` (IN `p_id_cont_
         
         COMMIT;
     END IF;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GenereazaExtras` (IN `p_id_cont` INT, IN `p_data_start` DATE, IN `p_data_end` DATE)   BEGIN
+    
+    DECLARE v_start DATETIME;
+    DECLARE v_end DATETIME;
+    
+    
+    
+    SET v_start = IFNULL(p_data_start, '2000-01-01 00:00:00');
+    SET v_end = IFNULL(p_data_end, NOW());
+
+    (
+        SELECT 
+            data_tranzactie AS Data,
+            tip_tranzactie AS Tip,
+            suma AS Suma,
+            detalii AS Detalii
+        FROM Tranzactii
+        WHERE id_cont = p_id_cont 
+          AND data_tranzactie BETWEEN v_start AND v_end
+    )
+    UNION ALL
+    (
+        SELECT 
+            data_transfer AS Data,
+            'Transfer' AS Tip,
+            CASE 
+                WHEN id_cont_sursa = p_id_cont THEN -suma 
+                ELSE suma 
+            END AS Suma,
+            mesaj_detaliu AS Detalii
+        FROM Transferuri
+        WHERE (id_cont_sursa = p_id_cont OR id_cont_destinatie = p_id_cont)
+          AND data_transfer BETWEEN v_start AND v_end
+    )
+    ORDER BY Data DESC;
 END$$
 
 DELIMITER ;
@@ -137,6 +174,16 @@ CREATE TRIGGER `dupa_update_sold` AFTER UPDATE ON `conturi` FOR EACH ROW BEGIN
     IF OLD.sold <> NEW.sold THEN
         INSERT INTO Audit_Solduri (id_cont, sold_vechi, sold_nou)
         VALUES (OLD.id_cont, OLD.sold, NEW.sold);
+    END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `verifica_sold_minim` BEFORE UPDATE ON `conturi` FOR EACH ROW BEGIN
+    
+    IF NEW.sold < 0 THEN
+        SIGNAL SQLSTATE '45000' 
+        SET MESSAGE_TEXT = 'Tranzactie respinsa: Fonduri insuficiente pentru sold minim!';
     END IF;
 END
 $$
