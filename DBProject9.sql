@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3307
--- Generation Time: Apr 29, 2026 at 03:08 AM
+-- Generation Time: Apr 29, 2026 at 07:22 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -202,6 +202,14 @@ CREATE TABLE `detalii_pf` (
   `cnp` char(13) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `detalii_pf`
+--
+
+INSERT INTO `detalii_pf` (`id_client`, `nume`, `prenume`, `cnp`) VALUES
+(1, 'Ionescu', 'Ion', '1234567890123'),
+(2, 'Popescu', 'Ana', '2234567890123');
+
 -- --------------------------------------------------------
 
 --
@@ -325,6 +333,53 @@ CREATE TRIGGER `dupa_insert_tranzactie` AFTER INSERT ON `tranzactii` FOR EACH RO
 END
 $$
 DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `v_dashboard_conturi`
+-- (See below for the actual view)
+--
+CREATE TABLE `v_dashboard_conturi` (
+`nume_titular` varchar(150)
+,`iban` varchar(24)
+,`sold` decimal(15,2)
+,`moneda` char(3)
+,`tip_cont` varchar(100)
+,`status` enum('Activ','Inchis','Blocat')
+);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `v_detalii_clienti`
+-- (See below for the actual view)
+--
+CREATE TABLE `v_detalii_clienti` (
+`id_client` int(11)
+,`tip_client` enum('PF','PJ')
+,`email` varchar(100)
+,`nume_titular` varchar(150)
+,`cod_identificare` varchar(20)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `v_dashboard_conturi`
+--
+DROP TABLE IF EXISTS `v_dashboard_conturi`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_dashboard_conturi`  AS SELECT `dc`.`nume_titular` AS `nume_titular`, `co`.`iban` AS `iban`, `co`.`sold` AS `sold`, `tc`.`moneda` AS `moneda`, `tc`.`nume_produs` AS `tip_cont`, `co`.`status` AS `status` FROM ((`v_detalii_clienti` `dc` join `conturi` `co` on(`dc`.`id_client` = `co`.`id_client`)) join `tipuricont` `tc` on(`co`.`id_tip_cont` = `tc`.`id_tip_cont`)) ;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `v_detalii_clienti`
+--
+DROP TABLE IF EXISTS `v_detalii_clienti`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_detalii_clienti`  AS SELECT `c`.`id_client` AS `id_client`, `c`.`tip_client` AS `tip_client`, `c`.`email` AS `email`, CASE WHEN `c`.`tip_client` = 'PF' THEN concat(`pf`.`nume`,' ',`pf`.`prenume`) WHEN `c`.`tip_client` = 'PJ' THEN `pj`.`denumire_firma` END AS `nume_titular`, CASE WHEN `c`.`tip_client` = 'PF' THEN `pf`.`cnp` WHEN `c`.`tip_client` = 'PJ' THEN `pj`.`cui` END AS `cod_identificare` FROM ((`clienti` `c` left join `detalii_pf` `pf` on(`c`.`id_client` = `pf`.`id_client`)) left join `detalii_pj` `pj` on(`c`.`id_client` = `pj`.`id_client`)) ;
 
 --
 -- Indexes for dumped tables
