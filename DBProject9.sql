@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3307
--- Generation Time: Apr 29, 2026 at 07:22 AM
+-- Generation Time: May 05, 2026 at 12:28 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -25,70 +25,24 @@ DELIMITER $$
 --
 -- Procedures
 --
-CREATE DEFINER=`root`@`localhost` PROCEDURE `EfectueazaTransfer` (IN `p_id_cont_sursa` INT, IN `p_id_cont_destinatie` INT, IN `p_suma` DECIMAL(15,2), IN `p_detalii` VARCHAR(255))   BEGIN
-    DECLARE v_sold_existent DECIMAL(15,2);
-
-    
+CREATE DEFINER=`root`@`localhost` PROCEDURE `EfectueazaTransfer` (IN `p_id_sursa` INT, IN `p_id_destinatie` INT, IN `p_suma` DECIMAL(15,2), IN `p_mesaj` VARCHAR(255))   BEGIN
     START TRANSACTION;
-
     
-    SELECT sold INTO v_sold_existent FROM Conturi WHERE id_cont = p_id_cont_sursa FOR UPDATE;
-
-    IF v_sold_existent < p_suma THEN
-        
-        ROLLBACK;
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Eroare: Fonduri insuficiente!';
-    ELSE
-        
-        UPDATE Conturi SET sold = sold - p_suma WHERE id_cont = p_id_cont_sursa;
-
-        
-        UPDATE Conturi SET sold = sold + p_suma WHERE id_cont = p_id_cont_destinatie;
-
-        
-        INSERT INTO Transferuri (id_cont_sursa, id_cont_destinatie, suma, mesaj_detaliu)
-        VALUES (p_id_cont_sursa, p_id_cont_destinatie, p_suma, p_detalii);
-
-        
-        COMMIT;
-    END IF;
+    UPDATE conturi SET sold = sold - p_suma WHERE id_cont = p_id_sursa;
+    
+    UPDATE conturi SET sold = sold + p_suma WHERE id_cont = p_id_destinatie;
+    
+    INSERT INTO transferuri (id_cont_sursa, id_cont_destinatie, suma, mesaj_detaliu)
+    VALUES (p_id_sursa, p_id_destinatie, p_suma, p_mesaj);
+    COMMIT;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `GenereazaExtras` (IN `p_id_cont` INT, IN `p_data_start` DATE, IN `p_data_end` DATE)   BEGIN
-    
-    DECLARE v_start DATETIME;
-    DECLARE v_end DATETIME;
-    
-    
-    
-    SET v_start = IFNULL(p_data_start, '2000-01-01 00:00:00');
-    SET v_end = IFNULL(p_data_end, NOW());
-
-    (
-        SELECT 
-            data_tranzactie AS Data,
-            tip_tranzactie AS Tip,
-            suma AS Suma,
-            detalii AS Detalii
-        FROM Tranzactii
-        WHERE id_cont = p_id_cont 
-          AND data_tranzactie BETWEEN v_start AND v_end
-    )
-    UNION ALL
-    (
-        SELECT 
-            data_transfer AS Data,
-            'Transfer' AS Tip,
-            CASE 
-                WHEN id_cont_sursa = p_id_cont THEN -suma 
-                ELSE suma 
-            END AS Suma,
-            mesaj_detaliu AS Detalii
-        FROM Transferuri
-        WHERE (id_cont_sursa = p_id_cont OR id_cont_destinatie = p_id_cont)
-          AND data_transfer BETWEEN v_start AND v_end
-    )
-    ORDER BY Data DESC;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GenereazaExtras` (IN `p_id_cont` INT)   BEGIN
+    SELECT 'Transfer Trimis' AS Tip, suma, data_transfer, mesaj_detaliu 
+    FROM transferuri WHERE id_cont_sursa = p_id_cont
+    UNION
+    SELECT 'Transfer Primit' AS Tip, suma, data_transfer, mesaj_detaliu 
+    FROM transferuri WHERE id_cont_destinatie = p_id_cont;
 END$$
 
 DELIMITER ;
@@ -298,6 +252,19 @@ CREATE TABLE `transferuri` (
 INSERT INTO `transferuri` (`id_transfer`, `id_cont_sursa`, `id_cont_destinatie`, `suma`, `mesaj_detaliu`, `data_transfer`) VALUES
 (2, 1, 2, 100.00, 'Test transfer', '2026-04-28 22:38:47');
 
+--
+-- Triggers `transferuri`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_notificare_transfer` AFTER INSERT ON `transferuri` FOR EACH ROW BEGIN
+    
+    INSERT INTO notificari (id_client, titlu, mesaj)
+    SELECT id_client, 'Bani primiti', CONCAT('Ai primit ', NEW.suma, ' RON. Detalii: ', NEW.mesaj_detaliu)
+    FROM conturi WHERE id_cont = NEW.id_cont_destinatie;
+END
+$$
+DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
@@ -337,6 +304,20 @@ DELIMITER ;
 -- --------------------------------------------------------
 
 --
+-- Stand-in structure for view `v_alerte_frauda`
+-- (See below for the actual view)
+--
+CREATE TABLE `v_alerte_frauda` (
+`id_transfer` int(11)
+,`id_cont_sursa` int(11)
+,`suma` decimal(15,2)
+,`data_transfer` timestamp
+,`status_risc` varchar(33)
+);
+
+-- --------------------------------------------------------
+
+--
 -- Stand-in structure for view `v_dashboard_conturi`
 -- (See below for the actual view)
 --
@@ -366,6 +347,15 @@ CREATE TABLE `v_detalii_clienti` (
 -- --------------------------------------------------------
 
 --
+-- Structure for view `v_alerte_frauda`
+--
+DROP TABLE IF EXISTS `v_alerte_frauda`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_alerte_frauda`  AS SELECT `t`.`id_transfer` AS `id_transfer`, `t`.`id_cont_sursa` AS `id_cont_sursa`, `t`.`suma` AS `suma`, `t`.`data_transfer` AS `data_transfer`, CASE WHEN `t`.`suma` > 5000 THEN 'Suma Neobisnuit de Mare' WHEN (select count(0) from `transferuri` `t2` where `t2`.`id_cont_sursa` = `t`.`id_cont_sursa` AND `t2`.`data_transfer` > `t`.`data_transfer` - interval 1 day) > 10 THEN 'Frecventa Ridicata (Posibil Atac)' ELSE 'Normal' END AS `status_risc` FROM `transferuri` AS `t` ;
+
+-- --------------------------------------------------------
+
+--
 -- Structure for view `v_dashboard_conturi`
 --
 DROP TABLE IF EXISTS `v_dashboard_conturi`;
@@ -389,7 +379,8 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 -- Indexes for table `audit_solduri`
 --
 ALTER TABLE `audit_solduri`
-  ADD PRIMARY KEY (`id_audit`);
+  ADD PRIMARY KEY (`id_audit`),
+  ADD KEY `idx_audit_cont` (`id_cont`);
 
 --
 -- Indexes for table `beneficiari`
@@ -411,8 +402,8 @@ ALTER TABLE `clienti`
 ALTER TABLE `conturi`
   ADD PRIMARY KEY (`id_cont`),
   ADD UNIQUE KEY `iban` (`iban`),
-  ADD KEY `id_client` (`id_client`),
-  ADD KEY `id_tip_cont` (`id_tip_cont`);
+  ADD KEY `id_tip_cont` (`id_tip_cont`),
+  ADD KEY `idx_client_cont` (`id_client`);
 
 --
 -- Indexes for table `detalii_pf`
@@ -454,14 +445,16 @@ ALTER TABLE `tipuricont`
 ALTER TABLE `transferuri`
   ADD PRIMARY KEY (`id_transfer`),
   ADD KEY `id_cont_sursa` (`id_cont_sursa`),
-  ADD KEY `id_cont_destinatie` (`id_cont_destinatie`);
+  ADD KEY `id_cont_destinatie` (`id_cont_destinatie`),
+  ADD KEY `idx_data_transfer` (`data_transfer`);
 
 --
 -- Indexes for table `tranzactii`
 --
 ALTER TABLE `tranzactii`
   ADD PRIMARY KEY (`id_tranzactie`),
-  ADD KEY `id_cont` (`id_cont`);
+  ADD KEY `id_cont` (`id_cont`),
+  ADD KEY `idx_data_tranzactie` (`data_tranzactie`);
 
 --
 -- AUTO_INCREMENT for dumped tables
