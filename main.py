@@ -100,7 +100,7 @@ class AppBancara(ctk.CTk):
         
         except Exception as e:
             messagebox.showerror("Eroare Baza de Date", str(e))
-            return None
+            raise e
         finally:
             if connection and connection.is_connected(): 
                 connection.close()

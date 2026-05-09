@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from tkinter import messagebox
 
 class User:
     def __init__(self, app, client_id):
@@ -49,36 +50,6 @@ class User:
             self.button_logout.pack(side="bottom", pady=20, padx=10, fill="x")
             self.menu_expanded = True
 
-    def display_account_hub(self, iban):
-        self.curata_content()
-        
-        query = "SELECT sold, moneda FROM v_dashboard_conturi WHERE iban = %s"
-        details = self.app.ruleaza_query(query, (iban,))
-        balance, currency = details[0] if details else (0, "N/A")
-
-        ctk.CTkLabel(self.content, text=f"Account: {iban}", font=("Courier New", 18, "bold")).pack(pady=(10, 0))
-        ctk.CTkLabel(self.content, text=f"{balance} {currency}", font=("Roboto", 32, "bold")).pack(pady=(0, 20))
-
-        actions_frame = ctk.CTkFrame(self.content, fg_color="transparent")
-        actions_frame.pack(expand=True)
-
-        buttons = [
-            ("New Transfer", lambda: print("Transfer Page")),
-            ("History", lambda: print("History Page")),
-            ("Statement", lambda: print("Statement Page")),
-            ("Beneficiaries", lambda: print("Contacts Page"))
-        ]
-
-        for i, (text, cmd) in enumerate(buttons):
-            row, col = divmod(i, 2)
-            ctk.CTkButton(
-                actions_frame, 
-                text=text, 
-                width=180, 
-                height=100, 
-                font=("Roboto", 14, "bold"),
-                command=cmd
-            ).grid(row=row, column=col, padx=10, pady=10)
 
     def afiseaza_situatie_conturi(self):
         self.curata_content()
@@ -111,3 +82,128 @@ class User:
                 font=("Courier New", 13, "bold") if i <= numar_conturi_reale else ("Roboto", 12),
                 command=cmd
             ).pack(pady=8)
+
+    def display_account_hub(self, iban):
+            self.curata_content()
+            
+            query = "SELECT sold, moneda FROM v_dashboard_conturi WHERE iban = %s"
+            details = self.app.ruleaza_query(query, (iban,))
+            balance, currency = details[0] if details else (0, "N/A")
+
+            ctk.CTkLabel(self.content, text=f"Account: {iban}", font=("Courier New", 18, "bold")).pack(pady=(10, 0))
+            ctk.CTkLabel(self.content, text=f"{balance} {currency}", font=("Roboto", 32, "bold")).pack(pady=(0, 20))
+
+            actions_frame = ctk.CTkFrame(self.content, fg_color="transparent")
+            actions_frame.pack(expand=True)
+
+            buttons = [
+                ("New Transfer", lambda: self.display_contacts(iban)),
+                ("History", lambda: print("History Page")),
+                ("Statement", lambda: print("Statement Page")),
+                ("Beneficiaries", lambda: print("Contacts Page"))
+            ]
+
+            for i, (text, cmd) in enumerate(buttons):
+                row, col = divmod(i, 2)
+                ctk.CTkButton(
+                    actions_frame, 
+                    text=text, 
+                    width=180, 
+                    height=100, 
+                    font=("Roboto", 14, "bold"),
+                    command=cmd
+                ).grid(row=row, column=col, padx=10, pady=10)
+
+    def display_contacts(self, source_iban):
+        self.curata_content()
+        ctk.CTkLabel(self.content, text="SELECT RECIPIENT", font=("Roboto", 22, "bold")).pack(pady=20)
+
+        scroll_frame = ctk.CTkScrollableFrame(self.content, width=500, height=300)
+        scroll_frame.pack(pady=10, padx=10)
+
+        # Fetch contacts from DB
+        contacts = self.app.ruleaza_query("SELECT nume_beneficiar, iban_beneficiar FROM beneficiari WHERE id_client = %s", (self.client_id,))
+
+        if not contacts:
+            ctk.CTkLabel(scroll_frame, text="No contacts found.").pack(pady=20)
+        else:
+            for name, iban in contacts:
+                # Each contact is a wide button
+                ctk.CTkButton(
+                    scroll_frame,
+                    text=f"{name}\n{iban}",
+                    width=450,
+                    height=60,
+                    anchor="w", # Text aligned to the left
+                    command=lambda n=name, i=iban: self.display_amount_entry(source_iban, n, i)
+                ).pack(pady=5)
+
+        # Manual entry button at the bottom
+        ctk.CTkButton(self.content, text="Enter IBAN Manually", fg_color="transparent", border_width=2,
+                    command=lambda: self.display_amount_entry(source_iban, "Manual Entry", "")).pack(pady=10)
+        
+    def display_amount_entry(self, source_iban, recipient_name, target_iban):
+        self.curata_content()
+        
+        # Reducem pady-urile ca să încapă totul pe 500px înălțime
+        ctk.CTkLabel(self.content, text="TRANSFER DETAILS", font=("Roboto", 22, "bold")).pack(pady=10)
+
+        ctk.CTkLabel(self.content, text=f"From: {source_iban}", font=("Courier New", 11)).pack()
+        ctk.CTkLabel(self.content, text=f"To: {recipient_name}", font=("Roboto", 14, "bold"), text_color="#1f538d").pack(pady=5)
+
+        # Recipient IBAN
+        ctk.CTkLabel(self.content, text="Recipient IBAN:").pack(pady=(5, 0))
+        self.recipient_iban_entry = ctk.CTkEntry(self.content, width=350)
+        self.recipient_iban_entry.insert(0, target_iban)
+        self.recipient_iban_entry.pack(pady=2)
+
+        # Amount
+        ctk.CTkLabel(self.content, text="Amount:").pack(pady=(5, 0))
+        self.amount_entry = ctk.CTkEntry(self.content, width=350, placeholder_text="0.00")
+        self.amount_entry.pack(pady=2)
+
+        # Details
+        ctk.CTkLabel(self.content, text="Details:").pack(pady=(5, 0))
+        self.details_entry = ctk.CTkEntry(self.content, width=350, placeholder_text="Reason for payment")
+        self.details_entry.pack(pady=2)
+
+        # Butonul de trimitere (Confirm)
+        ctk.CTkButton(
+            self.content, 
+            text="CONFIRM & SEND", 
+            fg_color="green", 
+            width=180, height=35,
+            font=("Roboto", 13, "bold"),
+            command=lambda: self.initiate_transfer(source_iban)
+        ).pack(pady=15)
+
+        # Butonul de înapoi (Fixat denumirea metodei aici)
+        ctk.CTkButton(self.content, text="← Back to contacts", fg_color="transparent", 
+                      command=lambda: self.display_contacts(source_iban)).pack()
+    def initiate_transfer(self, source_iban):
+        raw_target_iban = self.recipient_iban_entry.get()
+        raw_amount = self.amount_entry.get()
+        raw_details = self.details_entry.get()
+
+        # .strip() elimina spatiile de la inceput si sfarsit
+        clean_target_iban = raw_target_iban.strip()
+        clean_amount = raw_amount.strip()
+        clean_details = raw_details.strip()
+
+        if clean_target_iban == "" or clean_amount == "":
+            messagebox.showwarning("Empty Fields", "Please enter both IBAN and Amount!")
+            return
+
+        if clean_details == "":
+            clean_details = "Banking Transfer"
+
+        sql_command = "CALL EfectueazaTransfer(%s, %s, %s, %s)"
+        params = (source_iban, clean_target_iban, clean_amount, clean_details)
+
+        try:
+            self.app.ruleaza_query(sql_command, params, fetch=False)
+            messagebox.showinfo("Success", f"Transfer of {clean_amount} RON was successful!")
+            self.display_account_hub(source_iban)
+
+        except Exception as error:
+            messagebox.showerror("Transfer Error", str(error))

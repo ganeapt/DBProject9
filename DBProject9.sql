@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3307
--- Generation Time: May 05, 2026 at 12:28 AM
+-- Generation Time: May 10, 2026 at 01:43 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -25,15 +25,63 @@ DELIMITER $$
 --
 -- Procedures
 --
-CREATE DEFINER=`root`@`localhost` PROCEDURE `EfectueazaTransfer` (IN `p_id_sursa` INT, IN `p_id_destinatie` INT, IN `p_suma` DECIMAL(15,2), IN `p_mesaj` VARCHAR(255))   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `EfectueazaTransfer` (IN `p_iban_sursa` VARCHAR(24), IN `p_iban_destinatie` VARCHAR(24), IN `p_suma` DECIMAL(15,2), IN `p_mesaj` VARCHAR(255))   BEGIN
+    
+    DECLARE v_id_sursa INT;
+    DECLARE v_id_dest INT;
+    DECLARE v_sold_sursa DECIMAL(15,2);
+    DECLARE v_moneda_sursa VARCHAR(3);
+    DECLARE v_limita_minima DECIMAL(15,2);
+
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION 
+    BEGIN
+        ROLLBACK;
+        RESIGNAL;
+    END;
+
     START TRANSACTION;
+
     
-    UPDATE conturi SET sold = sold - p_suma WHERE id_cont = p_id_sursa;
+    SELECT id_cont, sold, moneda 
+    INTO v_id_sursa, v_sold_sursa, v_moneda_sursa
+    FROM conturi 
+    WHERE iban = p_iban_sursa FOR UPDATE;
+
     
-    UPDATE conturi SET sold = sold + p_suma WHERE id_cont = p_id_destinatie;
+    SELECT id_cont INTO v_id_dest 
+    FROM conturi 
+    WHERE iban = p_iban_destinatie FOR UPDATE;
+
     
-    INSERT INTO transferuri (id_cont_sursa, id_cont_destinatie, suma, mesaj_detaliu)
-    VALUES (p_id_sursa, p_id_destinatie, p_suma, p_mesaj);
+    SELECT min_transfer_limit INTO v_limita_minima 
+    FROM config_currencies 
+    WHERE currency_code = v_moneda_sursa;
+
+    
+    IF v_id_sursa IS NULL OR v_id_dest IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Eroare: IBAN inexistent în sistem.';
+    END IF;
+
+    IF p_suma < v_limita_minima THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Eroare: Suma este sub limita minima permisa.';
+    END IF;
+
+    IF v_sold_sursa < p_suma THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Eroare: Fonduri insuficiente.';
+    END IF;
+
+    
+    
+    
+    
+    INSERT INTO tranzactii (id_cont, tip_tranzactie, suma, detalii)
+    VALUES (v_id_sursa, 'Iesire', p_suma, CONCAT('Catre: ', p_iban_destinatie, ' | ', p_mesaj));
+
+    
+    INSERT INTO tranzactii (id_cont, tip_tranzactie, suma, detalii)
+    VALUES (v_id_dest, 'Intrare', p_suma, CONCAT('De la: ', p_iban_sursa, ' | ', p_mesaj));
+
     COMMIT;
 END$$
 
@@ -61,6 +109,22 @@ CREATE TABLE `audit_solduri` (
   `data_modificare` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `audit_solduri`
+--
+
+INSERT INTO `audit_solduri` (`id_audit`, `id_cont`, `sold_vechi`, `sold_nou`, `data_modificare`) VALUES
+(1, 1, 900.00, 800.00, '2026-05-09 22:54:25'),
+(2, 2, 1000.00, 1100.00, '2026-05-09 22:54:25'),
+(3, 1, 800.00, 700.00, '2026-05-09 22:54:25'),
+(4, 2, 1100.00, 1200.00, '2026-05-09 22:54:25'),
+(5, 1, 700.00, 600.00, '2026-05-09 22:54:45'),
+(6, 2, 1200.00, 1300.00, '2026-05-09 22:54:45'),
+(7, 1, 600.00, 500.00, '2026-05-09 22:54:45'),
+(8, 2, 1300.00, 1400.00, '2026-05-09 22:54:45'),
+(9, 1, 500.00, 400.00, '2026-05-09 23:22:12'),
+(10, 2, 1400.00, 1500.00, '2026-05-09 23:22:12');
+
 -- --------------------------------------------------------
 
 --
@@ -73,6 +137,15 @@ CREATE TABLE `beneficiari` (
   `nume_beneficiar` varchar(100) NOT NULL,
   `iban_beneficiar` varchar(24) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `beneficiari`
+--
+
+INSERT INTO `beneficiari` (`id_beneficiar`, `id_client`, `nume_beneficiar`, `iban_beneficiar`) VALUES
+(1, 1, 'Ana Popescu', 'RO44INGB0000555566667777'),
+(2, 1, 'Maria Ionescu', 'RO30BTRL0000333344445555'),
+(3, 1, 'George Vasile', 'RO40BTRL0000444455556666');
 
 -- --------------------------------------------------------
 
@@ -94,7 +167,37 @@ CREATE TABLE `clienti` (
 
 INSERT INTO `clienti` (`id_client`, `tip_client`, `email`, `telefon`, `data_aderare`) VALUES
 (1, 'PF', 'ion@email.com', '0722111222', '2026-04-28 22:38:28'),
-(2, 'PF', 'ana@email.com', '0733444555', '2026-04-28 22:38:28');
+(2, 'PF', 'ana@email.com', '0733444555', '2026-04-28 22:38:28'),
+(3, 'PF', 'maria@email.com', '0744111222', '2026-05-08 23:16:37'),
+(4, 'PF', 'george@email.com', '0755111222', '2026-05-08 23:16:37'),
+(5, 'PF', 'elena@email.com', '0766111222', '2026-05-08 23:16:37'),
+(6, 'PF', 'andrei@email.com', '0777111222', '2026-05-08 23:16:37'),
+(7, 'PF', 'cristi@email.com', '0788111222', '2026-05-08 23:16:37'),
+(8, 'PF', 'raluca@email.com', '0799111222', '2026-05-08 23:16:37'),
+(9, 'PF', 'stefan@email.com', '0722333444', '2026-05-08 23:16:37'),
+(10, 'PF', 'ioana@email.com', '0733555666', '2026-05-08 23:16:37');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `config_currencies`
+--
+
+CREATE TABLE `config_currencies` (
+  `currency_code` varchar(3) NOT NULL,
+  `currency_name` varchar(50) DEFAULT NULL,
+  `min_transfer_limit` decimal(15,2) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `config_currencies`
+--
+
+INSERT INTO `config_currencies` (`currency_code`, `currency_name`, `min_transfer_limit`) VALUES
+('EUR', 'Euro', 1.00),
+('GBP', 'British Pound', 1.00),
+('RON', 'Romanian Leu', 5.00),
+('USD', 'US Dollar', 1.00);
 
 -- --------------------------------------------------------
 
@@ -109,16 +212,21 @@ CREATE TABLE `conturi` (
   `iban` varchar(24) NOT NULL,
   `sold` decimal(15,2) DEFAULT 0.00,
   `data_deschidere` date DEFAULT curdate(),
-  `status` enum('Activ','Inchis','Blocat') DEFAULT 'Activ'
+  `status` enum('Activ','Inchis','Blocat') DEFAULT 'Activ',
+  `moneda` varchar(3) DEFAULT 'RON'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `conturi`
 --
 
-INSERT INTO `conturi` (`id_cont`, `id_client`, `id_tip_cont`, `iban`, `sold`, `data_deschidere`, `status`) VALUES
-(1, 1, 1, 'RO12BTRL0000111122223333', 900.00, '2026-04-29', 'Activ'),
-(2, 2, 1, 'RO44INGB0000555566667777', 1000.00, '2026-04-29', 'Activ');
+INSERT INTO `conturi` (`id_cont`, `id_client`, `id_tip_cont`, `iban`, `sold`, `data_deschidere`, `status`, `moneda`) VALUES
+(1, 1, 1, 'RO12BTRL0000111122223333', 400.00, '2026-04-29', 'Activ', 'RON'),
+(2, 2, 1, 'RO44INGB0000555566667777', 1500.00, '2026-04-29', 'Activ', 'RON'),
+(3, 3, 1, 'RO30BTRL0000333344445555', 5000.00, '2026-05-09', 'Activ', 'RON'),
+(4, 4, 1, 'RO40BTRL0000444455556666', 1200.50, '2026-05-09', 'Activ', 'RON'),
+(5, 5, 1, 'RO50BTRL0000555566667777', 340.00, '2026-05-09', 'Activ', 'RON'),
+(6, 6, 1, 'RO60BTRL0000666677778888', 9000.00, '2026-05-09', 'Activ', 'RON');
 
 --
 -- Triggers `conturi`
@@ -162,7 +270,15 @@ CREATE TABLE `detalii_pf` (
 
 INSERT INTO `detalii_pf` (`id_client`, `nume`, `prenume`, `cnp`) VALUES
 (1, 'Ionescu', 'Ion', '1234567890123'),
-(2, 'Popescu', 'Ana', '2234567890123');
+(2, 'Popescu', 'Ana', '2234567890123'),
+(3, 'Ionescu', 'Maria', '2900101123456'),
+(4, 'Popa', 'George', '1850101123456'),
+(5, 'Radu', 'Elena', '2920101123456'),
+(6, 'Marin', 'Andrei', '1880101123456'),
+(7, 'Stoica', 'Cristian', '1800101123456'),
+(8, 'Dinu', 'Raluca', '2950101123456'),
+(9, 'Nistor', 'Stefan', '1820101123456'),
+(10, 'Lazar', 'Ioana', '2980101123456');
 
 -- --------------------------------------------------------
 
@@ -285,7 +401,13 @@ CREATE TABLE `tranzactii` (
 --
 
 INSERT INTO `tranzactii` (`id_tranzactie`, `id_cont`, `tip_tranzactie`, `suma`, `detalii`, `data_tranzactie`) VALUES
-(1, 2, 'Intrare', 400.00, 'Depunere numerar ATM', '2026-04-28 22:40:30');
+(1, 2, 'Intrare', 400.00, 'Depunere numerar ATM', '2026-04-28 22:40:30'),
+(2, 1, 'Iesire', 100.00, 'Transfer catre: RO44INGB0000555566667777 | Tranzactie Test', '2026-05-09 22:54:25'),
+(3, 2, 'Intrare', 100.00, 'Transfer de la: RO12BTRL0000111122223333 | Tranzactie Test', '2026-05-09 22:54:25'),
+(4, 1, 'Iesire', 100.00, 'Transfer catre: RO44INGB0000555566667777 | Transfer Test 2', '2026-05-09 22:54:45'),
+(5, 2, 'Intrare', 100.00, 'Transfer de la: RO12BTRL0000111122223333 | Transfer Test 2', '2026-05-09 22:54:45'),
+(6, 1, 'Iesire', 100.00, 'Catre: RO44INGB0000555566667777 | .', '2026-05-09 23:22:12'),
+(7, 2, 'Intrare', 100.00, 'De la: RO12BTRL0000111122223333 | .', '2026-05-09 23:22:12');
 
 --
 -- Triggers `tranzactii`
@@ -322,7 +444,8 @@ CREATE TABLE `v_alerte_frauda` (
 -- (See below for the actual view)
 --
 CREATE TABLE `v_dashboard_conturi` (
-`nume_titular` varchar(150)
+`id_client` int(11)
+,`nume_titular` varchar(150)
 ,`iban` varchar(24)
 ,`sold` decimal(15,2)
 ,`moneda` char(3)
@@ -360,7 +483,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 --
 DROP TABLE IF EXISTS `v_dashboard_conturi`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_dashboard_conturi`  AS SELECT `dc`.`nume_titular` AS `nume_titular`, `co`.`iban` AS `iban`, `co`.`sold` AS `sold`, `tc`.`moneda` AS `moneda`, `tc`.`nume_produs` AS `tip_cont`, `co`.`status` AS `status` FROM ((`v_detalii_clienti` `dc` join `conturi` `co` on(`dc`.`id_client` = `co`.`id_client`)) join `tipuricont` `tc` on(`co`.`id_tip_cont` = `tc`.`id_tip_cont`)) ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_dashboard_conturi`  AS SELECT `co`.`id_client` AS `id_client`, `dc`.`nume_titular` AS `nume_titular`, `co`.`iban` AS `iban`, `co`.`sold` AS `sold`, `tc`.`moneda` AS `moneda`, `tc`.`nume_produs` AS `tip_cont`, `co`.`status` AS `status` FROM ((`v_detalii_clienti` `dc` join `conturi` `co` on(`dc`.`id_client` = `co`.`id_client`)) join `tipuricont` `tc` on(`co`.`id_tip_cont` = `tc`.`id_tip_cont`)) ;
 
 -- --------------------------------------------------------
 
@@ -397,13 +520,20 @@ ALTER TABLE `clienti`
   ADD UNIQUE KEY `email` (`email`);
 
 --
+-- Indexes for table `config_currencies`
+--
+ALTER TABLE `config_currencies`
+  ADD PRIMARY KEY (`currency_code`);
+
+--
 -- Indexes for table `conturi`
 --
 ALTER TABLE `conturi`
   ADD PRIMARY KEY (`id_cont`),
   ADD UNIQUE KEY `iban` (`iban`),
   ADD KEY `id_tip_cont` (`id_tip_cont`),
-  ADD KEY `idx_client_cont` (`id_client`);
+  ADD KEY `idx_client_cont` (`id_client`),
+  ADD KEY `fk_conturi_moneda` (`moneda`);
 
 --
 -- Indexes for table `detalii_pf`
@@ -464,25 +594,25 @@ ALTER TABLE `tranzactii`
 -- AUTO_INCREMENT for table `audit_solduri`
 --
 ALTER TABLE `audit_solduri`
-  MODIFY `id_audit` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id_audit` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `beneficiari`
 --
 ALTER TABLE `beneficiari`
-  MODIFY `id_beneficiar` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id_beneficiar` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `clienti`
 --
 ALTER TABLE `clienti`
-  MODIFY `id_client` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id_client` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `conturi`
 --
 ALTER TABLE `conturi`
-  MODIFY `id_cont` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id_cont` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `extrasecont`
@@ -512,7 +642,7 @@ ALTER TABLE `transferuri`
 -- AUTO_INCREMENT for table `tranzactii`
 --
 ALTER TABLE `tranzactii`
-  MODIFY `id_tranzactie` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id_tranzactie` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- Constraints for dumped tables
@@ -529,7 +659,8 @@ ALTER TABLE `beneficiari`
 --
 ALTER TABLE `conturi`
   ADD CONSTRAINT `conturi_ibfk_1` FOREIGN KEY (`id_client`) REFERENCES `clienti` (`id_client`),
-  ADD CONSTRAINT `conturi_ibfk_2` FOREIGN KEY (`id_tip_cont`) REFERENCES `tipuricont` (`id_tip_cont`);
+  ADD CONSTRAINT `conturi_ibfk_2` FOREIGN KEY (`id_tip_cont`) REFERENCES `tipuricont` (`id_tip_cont`),
+  ADD CONSTRAINT `fk_conturi_moneda` FOREIGN KEY (`moneda`) REFERENCES `config_currencies` (`currency_code`);
 
 --
 -- Constraints for table `detalii_pf`
