@@ -5,16 +5,17 @@ from tkinter import messagebox
 
 from user import User
 from admin import Admin
+from theme import THEME
 
 ctk.set_appearance_mode("dark")
-ctk.set_default_color_theme("blue")
-
 
 class AppBancara(ctk.CTk):
     def __init__(self):
         super().__init__()
+        self.theme = THEME
         self.title("Sistem Bancar Proiect 9")
         self.geometry("800x500")
+        self.configure(fg_color=self.theme["bg_dark"])
 
         with open('config.json', 'r') as f:
             self.all_configs = json.load(f)
@@ -30,7 +31,7 @@ class AppBancara(ctk.CTk):
         """Afișează meniul principal de selecție (User/Admin)."""
         self.curata_pagina()
 
-        self.label = ctk.CTkLabel(self, text="Digital Banking System", font=("Roboto", 26, "bold"))
+        self.label = ctk.CTkLabel(self, text="Digital Banking System", font=("Roboto", 26, "bold"), text_color=self.theme["text_main"])
         self.label.pack(pady=20)
 
         self.button_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -42,6 +43,10 @@ class AppBancara(ctk.CTk):
             text="USER", 
             width=200, height=200, 
             font=("Roboto", 20),
+            fg_color=self.theme["bg_panel"],
+            border_width=2,
+            border_color=self.theme["btn_accent"],
+            hover_color=self.theme["btn_accent"],
             command=self.selectie_utilizator
         )
         self.btn_user.pack(side="left", padx=20)
@@ -52,6 +57,10 @@ class AppBancara(ctk.CTk):
             text="ADMIN", 
             width=200, height=200, 
             font=("Roboto", 20),
+            fg_color=self.theme["bg_panel"],
+            border_width=2,
+            border_color=self.theme["btn_accent"],
+            hover_color=self.theme["btn_accent"],
             command=lambda: Admin(self)
         )
         self.btn_admin.pack(side="left", padx=20)
@@ -59,15 +68,15 @@ class AppBancara(ctk.CTk):
     def selectie_utilizator(self):
         self.curata_pagina()
         
-        ctk.CTkLabel(self, text="LOGIN CLIENT", font=("Roboto", 24, "bold")).pack(pady=40)
+        ctk.CTkLabel(self, text="LOGIN CLIENT", font=("Roboto", 24, "bold"), text_color=self.theme["text_main"]).pack(pady=40)
         
-        ctk.CTkLabel(self, text="Introdu adresa de email pentru acces:").pack(pady=5)
-        self.email_entry = ctk.CTkEntry(self, width=300, placeholder_text="exemplu@email.com")
+        ctk.CTkLabel(self, text="Introdu adresa de email pentru acces:", text_color=self.theme["text_dim"]).pack(pady=5)
+        self.email_entry = ctk.CTkEntry(self, width=300, placeholder_text="exemplu@email.com", fg_color=self.theme["card_inner"], border_color=self.theme["btn_accent"], text_color=self.theme["text_main"])
         self.email_entry.pack(pady=10)
 
-        ctk.CTkButton(self, text="Acces Cont", command=self.verifica_login_client).pack(pady=20)
+        ctk.CTkButton(self, text="Acces Cont", fg_color=self.theme["btn_accent"], hover_color=self.theme["btn_hover"], command=self.verifica_login_client).pack(pady=20)
         
-        ctk.CTkButton(self, text="← Înapoi", command=self.afiseaza_dashboard, fg_color="transparent").pack(pady=10)
+        ctk.CTkButton(self, text="← Înapoi", fg_color="transparent", text_color=self.theme["text_dim"], hover_color=self.theme["btn_hover"], command=self.afiseaza_dashboard).pack(pady=10)
 
     def verifica_login_client(self):
         email_introdus = self.email_entry.get().strip()
