@@ -12,3 +12,22 @@ THEME = {
     "danger": "#991B1B",      
     "danger_hover": "#F43F5E" 
 }
+
+STYLES = {
+    "card": {
+        "fg_color": THEME["bg_panel"],
+        "border_width": 2,
+        "border_color": THEME["btn_accent"],
+        "hover_color": THEME["btn_accent"],
+        "text_color": THEME["text_main"]
+    },
+    "input": {
+        "fg_color": THEME["card_inner"],
+        "border_color": THEME["btn_accent"],
+        "text_color": THEME["text_main"]
+    },
+    "btn_action": {
+        "fg_color": THEME["btn_accent"],
+        "hover_color": THEME["btn_hover"]
+    }
+}

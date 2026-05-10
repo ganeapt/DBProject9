@@ -5,7 +5,9 @@ from tkinter import messagebox
 
 from user import User
 from admin import Admin
-from theme import THEME
+from database import DatabaseManager
+from transactions import TransactionService
+from theme import THEME, STYLES
 
 ctk.set_appearance_mode("dark")
 
@@ -13,6 +15,7 @@ class AppBancara(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.theme = THEME
+        self.styles = STYLES
         self.title("Sistem Bancar Proiect 9")
         self.geometry("800x500")
         self.configure(fg_color=self.theme["bg_dark"])
@@ -20,12 +23,28 @@ class AppBancara(ctk.CTk):
         with open('config.json', 'r') as f:
             self.all_configs = json.load(f)
 
+        self.db = DatabaseManager(self.all_configs['admin'])
+
         self.afiseaza_dashboard()
 
     def curata_pagina(self):
         """Șterge toate elementele vizuale de pe fereastră."""
         for widget in self.winfo_children():
             widget.destroy()
+
+    def add_label(self, master, text, type="h1", pady=10):
+        styles = {
+            "h1": {"font": ("Roboto", 24, "bold"), "text_color": self.theme["text_main"]},
+            "h2": {"font": ("Roboto", 22, "bold"), "text_color": self.theme["text_main"]},
+            "tech": {"font": ("Courier New", 12, "bold"), "text_color": self.theme["text_dim"]},
+            "form": {"font": ("Roboto", 13), "text_color": self.theme["text_main"]},
+            "dim": {"font": ("Roboto", 14), "text_color": self.theme["text_dim"]}
+        }
+        style = styles.get(type, styles["h1"])
+        
+        label = ctk.CTkLabel(master, text=text, **style)
+        label.pack(pady=pady)
+        return label
 
     def afiseaza_dashboard(self):
         """Afișează meniul principal de selecție (User/Admin)."""
@@ -43,11 +62,8 @@ class AppBancara(ctk.CTk):
             text="USER", 
             width=200, height=200, 
             font=("Roboto", 20),
-            fg_color=self.theme["bg_panel"],
-            border_width=2,
-            border_color=self.theme["btn_accent"],
-            hover_color=self.theme["btn_accent"],
-            command=self.selectie_utilizator
+            command=self.selectie_utilizator,
+            **self.styles["card"]
         )
         self.btn_user.pack(side="left", padx=20)
 
@@ -57,11 +73,8 @@ class AppBancara(ctk.CTk):
             text="ADMIN", 
             width=200, height=200, 
             font=("Roboto", 20),
-            fg_color=self.theme["bg_panel"],
-            border_width=2,
-            border_color=self.theme["btn_accent"],
-            hover_color=self.theme["btn_accent"],
-            command=lambda: Admin(self)
+            command=lambda: Admin(self),
+            **self.styles["card"]
         )
         self.btn_admin.pack(side="left", padx=20)
 
@@ -96,23 +109,7 @@ class AppBancara(ctk.CTk):
 
     def ruleaza_query(self, sql, params=None, fetch=True):
         """Logica de conectare la baza de date."""
-        connection = None
-        try:
-            connection = mysql.connector.connect(**self.db_config)
-            cursor = connection.cursor()
-            cursor.execute(sql, params or ())
-            rezultat = cursor.fetchall() if fetch else None
-
-            if not fetch:
-                connection.commit()
-            return rezultat
-        
-        except Exception as e:
-            messagebox.showerror("Eroare Baza de Date", str(e))
-            raise e
-        finally:
-            if connection and connection.is_connected(): 
-                connection.close()
+        return self.db.ruleaza_query(sql, params, fetch)
 
 if __name__ == "__main__":
     app = AppBancara()

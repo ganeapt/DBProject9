@@ -1,5 +1,6 @@
 import customtkinter as ctk
 from tkinter import messagebox
+from transactions import TransactionService
 
 class User:
     def __init__(self, app, client_id):
@@ -7,6 +8,7 @@ class User:
         self.client_id = client_id
         self.menu_expanded = False
         self.app.db_config = self.app.all_configs['user']
+        self.transaction_service = TransactionService(self.app.db)
         self.app.curata_pagina()
 
         self.sidebar = ctk.CTkFrame(self.app, width=200, corner_radius=0, fg_color=self.app.theme["bg_panel"])
@@ -19,7 +21,7 @@ class User:
         self.toggle_button = ctk.CTkButton(self.sidebar, text="☰", width=40, height=40, fg_color="transparent", hover_color=self.app.theme["btn_hover"], command=self.toggle_menu)
         self.toggle_button.pack(anchor="nw", pady=10, padx=10)
         
-        self.button_situatie = ctk.CTkButton(self.sidebar, text="Situație Conturi", fg_color=self.app.theme["bg_panel"], border_width=2, border_color=self.app.theme["btn_accent"], hover_color=self.app.theme["btn_accent"], command=self.afiseaza_situatie_conturi)
+        self.button_situatie = ctk.CTkButton(self.sidebar, text="Situație Conturi", command=self.afiseaza_situatie_conturi, **self.app.styles["card"])
         self.button_situatie.pack(pady=10, padx=10, fill="x")
 
         self.button_logout = ctk.CTkButton(self.sidebar, text="Log Out", fg_color=self.app.theme["danger"], hover_color=self.app.theme["danger_hover"], command=self.app.afiseaza_dashboard)
@@ -53,7 +55,7 @@ class User:
 
     def afiseaza_situatie_conturi(self):
         self.curata_content()
-        ctk.CTkLabel(self.content, text="Alege Contul", font=("Roboto", 24, "bold"), text_color=self.app.theme["text_main"]).pack(pady=(10, 20))
+        self.app.add_label(self.content, "Alege Contul", type="h1", pady=(10, 20))
 
         sql = "SELECT iban, sold, moneda FROM v_dashboard_conturi WHERE id_client = %s"
         date = self.app.ruleaza_query(sql, (self.client_id,))
@@ -63,19 +65,13 @@ class User:
             if i <= numar_conturi_reale:
                 iban, sold, moneda = date[i-1]
                 btn_text = f"CONT {i} | {iban}\nSOLD: {sold} {moneda}"
-                color = self.app.theme["bg_panel"]
                 border_width = 2
-                border_color = self.app.theme["btn_accent"]
-                hover_color = self.app.theme["btn_accent"]
                 state = "normal"
                 cmd = lambda iban_s=iban: self.display_account_hub(iban_s)
             else:
                 btn_text = f"CONT {i} | Slot Disponibil"
-                color = self.app.theme["bg_panel"]
-                border_width = 0
-                border_color = self.app.theme["bg_panel"]
-                hover_color = self.app.theme["bg_panel"]
                 state = "disabled"
+                border_width = 0
                 cmd = None
 
             ctk.CTkButton(
@@ -83,14 +79,10 @@ class User:
                 text=btn_text,
                 width=500,
                 height=60,
-                fg_color=color,
-                border_width=border_width,
-                border_color=border_color,
-                hover_color=hover_color,
-                text_color=self.app.theme["text_main"],
                 state=state,
                 font=("Courier New", 13, "bold") if i <= numar_conturi_reale else ("Roboto", 12),
-                command=cmd
+                command=cmd,
+                **{**self.app.styles["card"], "border_width": border_width}
             ).pack(pady=8)
 
     def display_account_hub(self, iban):
@@ -100,8 +92,8 @@ class User:
             details = self.app.ruleaza_query(query, (iban,))
             balance, currency = details[0] if details else (0, "N/A")
 
-            ctk.CTkLabel(self.content, text=f"Account: {iban}", font=("Courier New", 18, "bold"), text_color=self.app.theme["text_dim"]).pack(pady=(10, 0))
-            ctk.CTkLabel(self.content, text=f"{balance} {currency}", font=("Roboto", 32, "bold"), text_color=self.app.theme["text_main"]).pack(pady=(0, 20))
+            self.app.add_label(self.content, f"Account: {iban}", type="tech", pady=(10, 0))
+            self.app.add_label(self.content, f"{balance} {currency}", type="h1", pady=(0, 20))
 
             actions_frame = ctk.CTkFrame(self.content, fg_color="transparent")
             actions_frame.pack(expand=True)
@@ -121,44 +113,23 @@ class User:
                     width=180, 
                     height=100, 
                     font=("Roboto", 14, "bold"),
-                    fg_color=self.app.theme["bg_panel"],
-                    border_width=2,
-                    border_color=self.app.theme["btn_accent"],
-                    hover_color=self.app.theme["btn_accent"],
-                    command=cmd
+                    command=cmd,
+                    **self.app.styles["card"]
                 ).grid(row=row, column=col, padx=10, pady=10)
 
     def new_transfer(self, source_iban):
-        raw_target_iban = self.recipient_iban_entry.get()
-        raw_amount = self.amount_entry.get()
-        raw_details = self.details_entry.get()
+        iban = self.recipient_iban_entry.get()
+        amount = self.amount_entry.get()
+        details = self.details_entry.get()
 
-        # .strip() elimina spatiile de la inceput si sfarsit
-        clean_target_iban = raw_target_iban.strip()
-        clean_amount = raw_amount.strip()
-        clean_details = raw_details.strip()
-
-        if clean_target_iban == "" or clean_amount == "":
-            messagebox.showwarning("Empty Fields", "Please enter both IBAN and Amount!")
-            return
-
-        if clean_details == "":
-            clean_details = "Banking Transfer"
-
-        sql_command = "CALL EfectueazaTransfer(%s, %s, %s, %s)"
-        params = (source_iban, clean_target_iban, clean_amount, clean_details)
-
-        try:
-            self.app.ruleaza_query(sql_command, params, fetch=False)
-            messagebox.showinfo("Success", f"Transfer of {clean_amount} RON was successful!")
+        success = self.transaction_service.executa_transfer(source_iban, iban, amount, details)
+        if success:
             self.display_account_hub(source_iban)
 
-        except Exception as error:
-            messagebox.showerror("Transfer Error", str(error))
 
     def display_contacts(self, source_iban):
         self.curata_content()
-        ctk.CTkLabel(self.content, text="SELECT RECIPIENT", font=("Roboto", 22, "bold"), text_color=self.app.theme["text_main"]).pack(pady=20)
+        self.app.add_label(self.content, "SELECT RECIPIENT", type="h1", pady=20)
 
         scroll_frame = ctk.CTkScrollableFrame(self.content, width=500, height=300, fg_color=self.app.theme["bg_dark"])
         scroll_frame.pack(pady=10, padx=10)
@@ -166,7 +137,7 @@ class User:
         contacts = self.app.ruleaza_query("SELECT nume_beneficiar, iban_beneficiar FROM beneficiari WHERE id_client = %s", (self.client_id,))
 
         if not contacts:
-            ctk.CTkLabel(scroll_frame, text="No contacts found.", text_color=self.app.theme["text_dim"]).pack(pady=20)
+            self.app.add_label(scroll_frame, "No contacts found.", type="tech", pady=20)
         else:
             for name, iban in contacts:
                 ctk.CTkButton(
@@ -174,12 +145,9 @@ class User:
                     text=f"{name}\n{iban}",
                     width=450,
                     height=60,
-                    fg_color=self.app.theme["bg_panel"],
-                    border_width=2,
-                    border_color=self.app.theme["btn_accent"],
-                    hover_color=self.app.theme["btn_accent"],
                     anchor="w",
-                    command=lambda n=name, i=iban: self.display_amount_entry(source_iban, n, i)
+                    command=lambda n=name, i=iban: self.display_amount_entry(source_iban, n, i),
+                    **self.app.styles["card"]
                 ).pack(pady=5)
 
         ctk.CTkButton(self.content, text="Enter IBAN Manually", fg_color="transparent", border_width=2, border_color=self.app.theme["btn_main"], text_color=self.app.theme["text_main"],
@@ -188,22 +156,22 @@ class User:
     def display_amount_entry(self, source_iban, recipient_name, target_iban):
         self.curata_content()
         
-        ctk.CTkLabel(self.content, text="TRANSFER DETAILS", font=("Roboto", 22, "bold"), text_color=self.app.theme["text_main"]).pack(pady=10)
+        self.app.add_label(self.content, "TRANSFER DETAILS", type="h2", pady=10)
 
-        ctk.CTkLabel(self.content, text=f"From: {source_iban}", font=("Courier New", 12, "bold"), text_color=self.app.theme["text_dim"]).pack()
-        ctk.CTkLabel(self.content, text=f"To: {recipient_name}", font=("Roboto", 14, "bold"), text_color=self.app.theme["text_main"]).pack(pady=5)
+        self.app.add_label(self.content, f"From: {source_iban}", type="tech")
+        self.app.add_label(self.content, f"To: {recipient_name}", type="form", pady=5)
 
-        ctk.CTkLabel(self.content, text="Recipient IBAN:", text_color=self.app.theme["text_main"]).pack(pady=(5, 0))
-        self.recipient_iban_entry = ctk.CTkEntry(self.content, width=350, fg_color=self.app.theme["card_inner"], border_color=self.app.theme["btn_accent"])
+        self.app.add_label(self.content, "Recipient IBAN:", type="form", pady=(5, 0))
+        self.recipient_iban_entry = ctk.CTkEntry(self.content, width=350, **self.app.styles["input"])
         self.recipient_iban_entry.insert(0, target_iban)
         self.recipient_iban_entry.pack(pady=2)
 
-        ctk.CTkLabel(self.content, text="Amount:", text_color=self.app.theme["text_main"]).pack(pady=(5, 0))
-        self.amount_entry = ctk.CTkEntry(self.content, width=350, placeholder_text="0.00", fg_color=self.app.theme["card_inner"], border_color=self.app.theme["btn_accent"])
+        self.app.add_label(self.content, "Amount:", type="form", pady=(5, 0))
+        self.amount_entry = ctk.CTkEntry(self.content, width=350, placeholder_text="0.00", **self.app.styles["input"])
         self.amount_entry.pack(pady=2)
 
-        ctk.CTkLabel(self.content, text="Details:", text_color=self.app.theme["text_main"]).pack(pady=(5, 0))
-        self.details_entry = ctk.CTkEntry(self.content, width=350, placeholder_text="Reason for payment", fg_color=self.app.theme["card_inner"], border_color=self.app.theme["btn_accent"])
+        self.app.add_label(self.content, "Details:", type="form", pady=(5, 0))
+        self.details_entry = ctk.CTkEntry(self.content, width=350, placeholder_text="Reason for payment", **self.app.styles["input"])
         self.details_entry.pack(pady=2)
 
         ctk.CTkButton(
