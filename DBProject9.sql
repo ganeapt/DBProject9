@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3307
--- Generation Time: May 10, 2026 at 01:43 AM
+-- Generation Time: May 11, 2026 at 09:23 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -25,8 +25,7 @@ DELIMITER $$
 --
 -- Procedures
 --
-CREATE DEFINER=`root`@`localhost` PROCEDURE `EfectueazaTransfer` (IN `p_iban_sursa` VARCHAR(24), IN `p_iban_destinatie` VARCHAR(24), IN `p_suma` DECIMAL(15,2), IN `p_mesaj` VARCHAR(255))   BEGIN
-    
+CREATE DEFINER=`root`@`localhost` PROCEDURE `EfectueazaTransfer` (IN `p_iban_sursa` VARCHAR(34), IN `p_iban_destinatar` VARCHAR(34), IN `p_suma` DECIMAL(15,2), IN `p_motiv` VARCHAR(255))   BEGIN
     DECLARE v_id_sursa INT;
     DECLARE v_id_dest INT;
     DECLARE v_sold_sursa DECIMAL(15,2);
@@ -51,13 +50,14 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `EfectueazaTransfer` (IN `p_iban_sur
     
     SELECT id_cont INTO v_id_dest 
     FROM conturi 
-    WHERE iban = p_iban_destinatie FOR UPDATE;
+    WHERE iban = p_iban_destinatar FOR UPDATE;
 
     
     SELECT min_transfer_limit INTO v_limita_minima 
     FROM config_currencies 
     WHERE currency_code = v_moneda_sursa;
 
+    
     
     IF v_id_sursa IS NULL OR v_id_dest IS NULL THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Eroare: IBAN inexistent în sistem.';
@@ -74,13 +74,12 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `EfectueazaTransfer` (IN `p_iban_sur
     
     
     
-    
-    INSERT INTO tranzactii (id_cont, tip_tranzactie, suma, detalii)
-    VALUES (v_id_sursa, 'Iesire', p_suma, CONCAT('Catre: ', p_iban_destinatie, ' | ', p_mesaj));
+    INSERT INTO tranzactii (id_cont, tip_tranzactie, suma, iban_partener, motiv_plata)
+    VALUES (v_id_sursa, 'Iesire', p_suma, p_iban_destinatar, p_motiv);
 
     
-    INSERT INTO tranzactii (id_cont, tip_tranzactie, suma, detalii)
-    VALUES (v_id_dest, 'Intrare', p_suma, CONCAT('De la: ', p_iban_sursa, ' | ', p_mesaj));
+    INSERT INTO tranzactii (id_cont, tip_tranzactie, suma, iban_partener, motiv_plata)
+    VALUES (v_id_dest, 'Intrare', p_suma, p_iban_sursa, p_motiv);
 
     COMMIT;
 END$$
@@ -123,7 +122,32 @@ INSERT INTO `audit_solduri` (`id_audit`, `id_cont`, `sold_vechi`, `sold_nou`, `d
 (7, 1, 600.00, 500.00, '2026-05-09 22:54:45'),
 (8, 2, 1300.00, 1400.00, '2026-05-09 22:54:45'),
 (9, 1, 500.00, 400.00, '2026-05-09 23:22:12'),
-(10, 2, 1400.00, 1500.00, '2026-05-09 23:22:12');
+(10, 2, 1400.00, 1500.00, '2026-05-09 23:22:12'),
+(11, 1, 400.00, 390.00, '2026-05-10 01:03:34'),
+(12, 2, 1500.00, 1510.00, '2026-05-10 01:03:34'),
+(13, 1, 390.00, 380.00, '2026-05-10 01:12:32'),
+(14, 2, 1510.00, 1520.00, '2026-05-10 01:12:32'),
+(15, 1, 380.00, 370.00, '2026-05-10 01:12:54'),
+(16, 2, 1520.00, 1530.00, '2026-05-10 01:12:54'),
+(17, 1, 370.00, 360.00, '2026-05-10 01:18:16'),
+(18, 2, 1530.00, 1540.00, '2026-05-10 01:18:16'),
+(19, 1, 360.00, 350.00, '2026-05-10 02:25:34'),
+(20, 2, 1540.00, 1550.00, '2026-05-10 02:25:34'),
+(21, 1, 350.00, 250.00, '2026-05-10 19:40:03'),
+(22, 2, 1550.00, 1650.00, '2026-05-10 19:40:03'),
+(23, 1, 250.00, 150.00, '2026-05-10 20:02:26'),
+(24, 2, 1650.00, 1750.00, '2026-05-10 20:02:26'),
+(25, 1, 150.00, 0.00, '2026-05-10 22:07:43'),
+(26, 2, 1750.00, 1900.00, '2026-05-10 22:07:43'),
+(27, 1, 0.00, 1000.00, '2026-05-11 04:24:20'),
+(28, 1, 1000.00, 900.00, '2026-05-11 17:55:40'),
+(29, 2, 1900.00, 2000.00, '2026-05-11 17:55:40'),
+(30, 1, 900.00, 800.00, '2026-05-11 17:55:40'),
+(31, 2, 2000.00, 2100.00, '2026-05-11 17:55:40'),
+(32, 1, 800.00, 790.00, '2026-05-11 18:54:41'),
+(33, 2, 2100.00, 2110.00, '2026-05-11 18:54:41'),
+(34, 1, 790.00, 780.00, '2026-05-11 19:11:52'),
+(35, 2, 2110.00, 2120.00, '2026-05-11 19:11:52');
 
 -- --------------------------------------------------------
 
@@ -221,8 +245,8 @@ CREATE TABLE `conturi` (
 --
 
 INSERT INTO `conturi` (`id_cont`, `id_client`, `id_tip_cont`, `iban`, `sold`, `data_deschidere`, `status`, `moneda`) VALUES
-(1, 1, 1, 'RO12BTRL0000111122223333', 400.00, '2026-04-29', 'Activ', 'RON'),
-(2, 2, 1, 'RO44INGB0000555566667777', 1500.00, '2026-04-29', 'Activ', 'RON'),
+(1, 1, 1, 'RO12BTRL0000111122223333', 780.00, '2026-04-29', 'Activ', 'RON'),
+(2, 2, 1, 'RO44INGB0000555566667777', 2120.00, '2026-04-29', 'Activ', 'RON'),
 (3, 3, 1, 'RO30BTRL0000333344445555', 5000.00, '2026-05-09', 'Activ', 'RON'),
 (4, 4, 1, 'RO40BTRL0000444455556666', 1200.50, '2026-05-09', 'Activ', 'RON'),
 (5, 5, 1, 'RO50BTRL0000555566667777', 340.00, '2026-05-09', 'Activ', 'RON'),
@@ -392,7 +416,8 @@ CREATE TABLE `tranzactii` (
   `id_cont` int(11) NOT NULL,
   `tip_tranzactie` enum('Intrare','Iesire') NOT NULL,
   `suma` decimal(15,2) NOT NULL,
-  `detalii` varchar(255) DEFAULT NULL,
+  `iban_partener` varchar(34) DEFAULT NULL,
+  `motiv_plata` varchar(255) DEFAULT NULL,
   `data_tranzactie` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -400,14 +425,36 @@ CREATE TABLE `tranzactii` (
 -- Dumping data for table `tranzactii`
 --
 
-INSERT INTO `tranzactii` (`id_tranzactie`, `id_cont`, `tip_tranzactie`, `suma`, `detalii`, `data_tranzactie`) VALUES
-(1, 2, 'Intrare', 400.00, 'Depunere numerar ATM', '2026-04-28 22:40:30'),
-(2, 1, 'Iesire', 100.00, 'Transfer catre: RO44INGB0000555566667777 | Tranzactie Test', '2026-05-09 22:54:25'),
-(3, 2, 'Intrare', 100.00, 'Transfer de la: RO12BTRL0000111122223333 | Tranzactie Test', '2026-05-09 22:54:25'),
-(4, 1, 'Iesire', 100.00, 'Transfer catre: RO44INGB0000555566667777 | Transfer Test 2', '2026-05-09 22:54:45'),
-(5, 2, 'Intrare', 100.00, 'Transfer de la: RO12BTRL0000111122223333 | Transfer Test 2', '2026-05-09 22:54:45'),
-(6, 1, 'Iesire', 100.00, 'Catre: RO44INGB0000555566667777 | .', '2026-05-09 23:22:12'),
-(7, 2, 'Intrare', 100.00, 'De la: RO12BTRL0000111122223333 | .', '2026-05-09 23:22:12');
+INSERT INTO `tranzactii` (`id_tranzactie`, `id_cont`, `tip_tranzactie`, `suma`, `iban_partener`, `motiv_plata`, `data_tranzactie`) VALUES
+(1, 2, 'Intrare', 400.00, NULL, NULL, '2026-04-28 22:40:30'),
+(2, 1, 'Iesire', 100.00, NULL, NULL, '2026-05-09 22:54:25'),
+(3, 2, 'Intrare', 100.00, NULL, NULL, '2026-05-09 22:54:25'),
+(4, 1, 'Iesire', 100.00, NULL, NULL, '2026-05-09 22:54:45'),
+(5, 2, 'Intrare', 100.00, NULL, NULL, '2026-05-09 22:54:45'),
+(6, 1, 'Iesire', 100.00, NULL, NULL, '2026-05-09 23:22:12'),
+(7, 2, 'Intrare', 100.00, NULL, NULL, '2026-05-09 23:22:12'),
+(8, 1, 'Iesire', 10.00, NULL, NULL, '2026-05-10 01:03:34'),
+(9, 2, 'Intrare', 10.00, NULL, NULL, '2026-05-10 01:03:34'),
+(10, 1, 'Iesire', 10.00, NULL, NULL, '2026-05-10 01:12:32'),
+(11, 2, 'Intrare', 10.00, NULL, NULL, '2026-05-10 01:12:32'),
+(12, 1, 'Iesire', 10.00, NULL, NULL, '2026-05-10 01:12:54'),
+(13, 2, 'Intrare', 10.00, NULL, NULL, '2026-05-10 01:12:54'),
+(14, 1, 'Iesire', 10.00, NULL, NULL, '2026-05-10 01:18:16'),
+(15, 2, 'Intrare', 10.00, NULL, NULL, '2026-05-10 01:18:16'),
+(16, 1, 'Iesire', 10.00, NULL, NULL, '2026-05-10 02:25:34'),
+(17, 2, 'Intrare', 10.00, NULL, NULL, '2026-05-10 02:25:34'),
+(18, 1, 'Iesire', 100.00, NULL, NULL, '2026-05-10 19:40:03'),
+(19, 2, 'Intrare', 100.00, NULL, NULL, '2026-05-10 19:40:03'),
+(20, 1, 'Iesire', 100.00, NULL, NULL, '2026-05-10 20:02:26'),
+(21, 2, 'Intrare', 100.00, NULL, NULL, '2026-05-10 20:02:26'),
+(22, 1, 'Iesire', 150.00, NULL, NULL, '2026-05-10 22:07:43'),
+(23, 2, 'Intrare', 150.00, NULL, NULL, '2026-05-10 22:07:43'),
+(25, 1, 'Iesire', 100.00, 'RO44INGB0000555566667777', 'Motiv', '2026-05-11 17:55:40'),
+(26, 2, 'Intrare', 100.00, 'RO12BTRL0000111122223333', 'Motiv', '2026-05-11 17:55:40'),
+(27, 1, 'Iesire', 10.00, 'RO44INGB0000555566667777', 'Motiv', '2026-05-11 18:54:41'),
+(28, 2, 'Intrare', 10.00, 'RO12BTRL0000111122223333', 'Motiv', '2026-05-11 18:54:41'),
+(29, 1, 'Iesire', 10.00, 'RO44INGB0000555566667777', 'Motiv', '2026-05-11 19:11:52'),
+(30, 2, 'Intrare', 10.00, 'RO12BTRL0000111122223333', 'Motiv', '2026-05-11 19:11:52');
 
 --
 -- Triggers `tranzactii`
@@ -470,6 +517,24 @@ CREATE TABLE `v_detalii_clienti` (
 -- --------------------------------------------------------
 
 --
+-- Stand-in structure for view `v_istoric_tranzactii`
+-- (See below for the actual view)
+--
+CREATE TABLE `v_istoric_tranzactii` (
+`id_tranzactie` int(11)
+,`id_cont` int(11)
+,`iban_cont` varchar(24)
+,`tip_tranzactie` enum('Intrare','Iesire')
+,`suma` decimal(15,2)
+,`iban_partener` varchar(34)
+,`motiv_plata` varchar(255)
+,`data_tranzactie` timestamp
+,`entitate` varchar(100)
+);
+
+-- --------------------------------------------------------
+
+--
 -- Structure for view `v_alerte_frauda`
 --
 DROP TABLE IF EXISTS `v_alerte_frauda`;
@@ -493,6 +558,15 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 DROP TABLE IF EXISTS `v_detalii_clienti`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_detalii_clienti`  AS SELECT `c`.`id_client` AS `id_client`, `c`.`tip_client` AS `tip_client`, `c`.`email` AS `email`, CASE WHEN `c`.`tip_client` = 'PF' THEN concat(`pf`.`nume`,' ',`pf`.`prenume`) WHEN `c`.`tip_client` = 'PJ' THEN `pj`.`denumire_firma` END AS `nume_titular`, CASE WHEN `c`.`tip_client` = 'PF' THEN `pf`.`cnp` WHEN `c`.`tip_client` = 'PJ' THEN `pj`.`cui` END AS `cod_identificare` FROM ((`clienti` `c` left join `detalii_pf` `pf` on(`c`.`id_client` = `pf`.`id_client`)) left join `detalii_pj` `pj` on(`c`.`id_client` = `pj`.`id_client`)) ;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `v_istoric_tranzactii`
+--
+DROP TABLE IF EXISTS `v_istoric_tranzactii`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_istoric_tranzactii`  AS SELECT `t`.`id_tranzactie` AS `id_tranzactie`, `t`.`id_cont` AS `id_cont`, `c`.`iban` AS `iban_cont`, `t`.`tip_tranzactie` AS `tip_tranzactie`, `t`.`suma` AS `suma`, `t`.`iban_partener` AS `iban_partener`, `t`.`motiv_plata` AS `motiv_plata`, `t`.`data_tranzactie` AS `data_tranzactie`, CASE WHEN `t`.`tip_tranzactie` = 'Iesire' THEN coalesce((select `b`.`nume_beneficiar` from `beneficiari` `b` where `b`.`iban_beneficiar` = `t`.`iban_partener` limit 1),'Plata/Transfer') ELSE 'Depunere/Incasare' END AS `entitate` FROM (`tranzactii` `t` join `conturi` `c` on(`t`.`id_cont` = `c`.`id_cont`)) ;
 
 --
 -- Indexes for dumped tables
@@ -594,7 +668,7 @@ ALTER TABLE `tranzactii`
 -- AUTO_INCREMENT for table `audit_solduri`
 --
 ALTER TABLE `audit_solduri`
-  MODIFY `id_audit` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id_audit` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
 -- AUTO_INCREMENT for table `beneficiari`
@@ -642,7 +716,7 @@ ALTER TABLE `transferuri`
 -- AUTO_INCREMENT for table `tranzactii`
 --
 ALTER TABLE `tranzactii`
-  MODIFY `id_tranzactie` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id_tranzactie` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
 
 --
 -- Constraints for dumped tables

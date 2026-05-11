@@ -100,7 +100,7 @@ class User:
 
             buttons = [
                 ("New Transfer", lambda: self.display_contacts(iban)),
-                ("History", lambda: print("History Page")),
+                ("History", lambda: self.afiseaza_istoric(iban)),
                 ("Statement", lambda: print("Statement Page")),
                 ("Beneficiaries", lambda: print("Contacts Page"))
             ]
@@ -131,7 +131,7 @@ class User:
         self.curata_content()
         self.app.add_label(self.content, "SELECT RECIPIENT", type="h1", pady=20)
 
-        scroll_frame = ctk.CTkScrollableFrame(self.content, width=500, height=300, fg_color=self.app.theme["bg_dark"])
+        scroll_frame = ctk.CTkScrollableFrame(self.content, width=500, height=300, fg_color=self.app.theme["bg_dark"], scrollbar_button_color=self.app.theme["btn_accent"], scrollbar_button_hover_color=self.app.theme["btn_hover"])
         scroll_frame.pack(pady=10, padx=10)
 
         contacts = self.app.ruleaza_query("SELECT nume_beneficiar, iban_beneficiar FROM beneficiari WHERE id_client = %s", (self.client_id,))
@@ -150,7 +150,7 @@ class User:
                     **self.app.styles["card"]
                 ).pack(pady=5)
 
-        ctk.CTkButton(self.content, text="Enter IBAN Manually", fg_color="transparent", border_width=2, border_color=self.app.theme["btn_main"], text_color=self.app.theme["text_main"],
+        ctk.CTkButton(self.content, text="Enter IBAN Manually", fg_color="transparent", border_width=2, border_color=self.app.theme["btn_accent"], text_color=self.app.theme["text_main"],
                     command=lambda: self.display_amount_entry(source_iban, "Manual Entry", "")).pack(pady=10)
         
     def display_amount_entry(self, source_iban, recipient_name, target_iban):
@@ -187,4 +187,59 @@ class User:
 
         ctk.CTkButton(self.content, text="← Back to contacts", fg_color="transparent", text_color=self.app.theme["text_dim"], 
                       command=lambda: self.display_contacts(source_iban)).pack()
+        
+        
+    def _add_row_label(self, container, text, type):
+        lbl = self.app.add_label(container, text, type=type)
+        lbl.configure(height=0) 
+        lbl.pack(anchor="w", pady=0)
+        return lbl
     
+    def afiseaza_istoric(self, iban_ales):
+        sql = "SELECT data_tranzactie, entitate, suma, tip_tranzactie, iban_partener, motiv_plata FROM v_istoric_tranzactii WHERE iban_cont = %s ORDER BY data_tranzactie DESC"
+        tranzactii = self.app.ruleaza_query(sql, (iban_ales,))
+    
+        self.content.pack_forget()
+        self.curata_content()
+        
+        self._construieste_istoric_ui(iban_ales, tranzactii)
+        self.content.pack(side="right", expand=True, fill="both", padx=20, pady=20)
+
+    def _construieste_istoric_ui(self, iban_ales, tranzactii):
+        self.app.add_label(self.content, f"ISTORIC: {iban_ales}", type="h2")
+
+        scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent", scrollbar_button_color=self.app.theme["btn_accent"], scrollbar_button_hover_color=self.app.theme["btn_hover"])
+        scroll.pack(fill="both", expand=True, padx=10, pady=10)
+
+        if not tranzactii:
+            self.app.add_label(scroll, "Nu există tranzacții.", type="dim")
+        else:
+            for t in tranzactii:
+                self._creeaza_rand_tranzactie(scroll, t)
+
+        nav_frame = ctk.CTkFrame(self.content, fg_color="transparent")
+        nav_frame.pack(side="bottom", fill="x", pady=10)
+        ctk.CTkButton(nav_frame, text="← Înapoi", width=150, command=lambda: self.display_account_hub(iban_ales), **self.app.styles["card"]).pack()
+
+    def _creeaza_rand_tranzactie(self, parent, data_t):
+        data, entitate, suma, tip, iban_partener, motiv_plata = data_t
+        
+        if tip == 'Iesire':
+            color = self.app.theme["danger"]
+            semn = "-"
+        else:
+            color = self.app.theme["success"]
+            semn = "+"
+
+        rand = ctk.CTkFrame(parent, **self.app.styles["transaction_row"], corner_radius=12)
+        rand.pack(pady=5, fill="x", padx=5)
+
+        txt_col = ctk.CTkFrame(rand, fg_color="transparent")
+        txt_col.pack(side="left", padx=15, pady=8)
+
+        self._add_row_label(txt_col, data.strftime('%H:%M'), "lbl_data")
+        self._add_row_label(txt_col, entitate, "lbl_primary")
+        self._add_row_label(txt_col, iban_partener or "-", "lbl_data")
+        self._add_row_label(txt_col, f"Motiv: {motiv_plata or '-'}", "lbl_secondary")
+
+        ctk.CTkLabel(rand, text=f"{semn}{suma} RON", text_color=color, font=("Roboto", 16, "bold")).pack(side="right", padx=20)

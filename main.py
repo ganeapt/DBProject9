@@ -38,7 +38,10 @@ class AppBancara(ctk.CTk):
             "h2": {"font": ("Roboto", 22, "bold"), "text_color": self.theme["text_main"]},
             "tech": {"font": ("Courier New", 12, "bold"), "text_color": self.theme["text_dim"]},
             "form": {"font": ("Roboto", 13), "text_color": self.theme["text_main"]},
-            "dim": {"font": ("Roboto", 14), "text_color": self.theme["text_dim"]}
+            "dim": {"font": ("Roboto", 14), "text_color": self.theme["text_dim"]},
+            "lbl_data": {"font": ("Roboto", 11), "text_color": self.theme["text_dim"]},
+            "lbl_primary": {"font": ("Roboto", 18, "bold"), "text_color": self.theme["text_main"]},
+            "lbl_secondary": {"font": ("Roboto", 13), "text_color": self.theme["text_dim"]}
         }
         style = styles.get(type, styles["h1"])
         
