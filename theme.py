@@ -30,6 +30,24 @@ STYLES = {
         "fg_color": THEME["btn_accent"],
         "hover_color": THEME["btn_hover"]
     },
+    "btn_back": {
+        "fg_color": "transparent",
+        "border_width": 2,
+        "border_color": THEME["btn_accent"],
+        "text_color": THEME["text_main"],
+        "hover_color": THEME["bg_panel"]
+    },
+    "combobox": {
+        "fg_color": THEME["bg_panel"],
+        "border_color": THEME["btn_accent"],
+        "border_width": 2,
+        "button_color": THEME["btn_accent"],
+        "button_hover_color": THEME["btn_hover"],
+        "dropdown_fg_color": THEME["bg_panel"],
+        "dropdown_hover_color": THEME["btn_hover"],
+        "dropdown_text_color": THEME["text_main"],
+        "corner_radius": 8
+    },
     "transaction_row": {
         "fg_color": THEME["bg_panel"],
         "border_width": 1,

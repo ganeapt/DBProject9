@@ -1,5 +1,6 @@
 import customtkinter as ctk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
+from datetime import datetime
 from transactions import TransactionService
 
 class User:
@@ -101,7 +102,7 @@ class User:
             buttons = [
                 ("New Transfer", lambda: self.display_contacts(iban)),
                 ("History", lambda: self.afiseaza_istoric(iban)),
-                ("Statement", lambda: print("Statement Page")),
+                ("Statement", lambda: self.statements_interface(iban)),
                 ("Beneficiaries", lambda: print("Contacts Page"))
             ]
 
@@ -188,7 +189,7 @@ class User:
         ctk.CTkButton(self.content, text="← Back to contacts", fg_color="transparent", text_color=self.app.theme["text_dim"], 
                       command=lambda: self.display_contacts(source_iban)).pack()
         
-        
+
     def _add_row_label(self, container, text, type):
         lbl = self.app.add_label(container, text, type=type)
         lbl.configure(height=0) 
@@ -243,3 +244,151 @@ class User:
         self._add_row_label(txt_col, f"Motiv: {motiv_plata or '-'}", "lbl_secondary")
 
         ctk.CTkLabel(rand, text=f"{semn}{suma} RON", text_color=color, font=("Roboto", 16, "bold")).pack(side="right", padx=20)
+
+
+
+    def _create_date_selector(self, parent, title, days, months, years, d_day, d_month, d_year):
+        """Helper function to create a row of 3 dropdowns."""
+        self.app.add_label(parent, title, type="form").pack(anchor="center")
+        selector_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        selector_frame.pack(pady=(5, 15))
+        
+        day_cb = ctk.CTkComboBox(selector_frame, values=days, width=75, **self.app.styles["combobox"])
+        day_cb.set(d_day); day_cb.pack(side="left", padx=2)
+        
+        month_cb = ctk.CTkComboBox(selector_frame, values=months, width=75, **self.app.styles["combobox"])
+        month_cb.set(d_month); month_cb.pack(side="left", padx=2)
+        
+        year_cb = ctk.CTkComboBox(selector_frame, values=years, width=95, **self.app.styles["combobox"])
+        year_cb.set(d_year); year_cb.pack(side="left", padx=2)
+        
+        return day_cb, month_cb, year_cb
+
+
+
+    def statements_interface(self, iban):
+        self.curata_content()
+        main_frame = ctk.CTkFrame(self.content, fg_color="transparent")
+        main_frame.pack(expand=True, fill="both", padx=10, pady=5)
+
+        self.app.add_label(main_frame, "CONFIGURARE EXTRAS", type="h2").pack(pady=(0, 25))
+
+        days = [str(i).zfill(2) for i in range(1, 32)]
+        months = [str(i).zfill(2) for i in range(1, 13)]
+        years = ["2024", "2025", "2026"]
+
+        self.start_day, self.start_month, self.start_year = self._create_date_selector(
+            main_frame, "Data Început:", days, months, years, "01", "01", "2026"
+        )
+        
+        self.end_day, self.end_month, self.end_year = self._create_date_selector(
+            main_frame, "Data Sfârșit:", days, months, years, "31", "12", "2026"
+        )
+
+        buttons_container = ctk.CTkFrame(main_frame, fg_color="transparent")
+        buttons_container.pack(pady=(60, 0))
+
+        ctk.CTkButton(
+            buttons_container, 
+            text="Generează Extras (.txt)", 
+            width=250, height=40,
+            command=lambda: self.process_statement_generation(
+                iban, 
+                self.start_day.get(), self.start_month.get(), self.start_year.get(),
+                self.end_day.get(), self.end_month.get(), self.end_year.get()
+            ),
+            **self.app.styles["btn_action"]
+        ).pack(pady=5)
+
+        ctk.CTkButton(
+            buttons_container, 
+            text="← Înapoi", 
+            width=250, height=35,
+            command=lambda: self.display_account_hub(iban),
+            **self.app.styles["btn_back"]
+        ).pack(pady=5)
+
+
+
+    def format_as_mysql_table(self, headers, data):
+        widths = []
+        for i in range(len(headers)):
+            max_w = len(headers[i])
+            for row in data:
+                val_len = len(str(row[i]))
+                if val_len > max_w:
+                    max_w = val_len
+            widths.append(max_w)
+
+        separator = "+" + "+".join("-" * (w + 2) for w in widths) + "+"
+        lines = [separator]
+
+        header_line = "|" + "|".join(f" {headers[i]:<{widths[i]}} " for i in range(len(headers))) + "|"
+        lines.append(header_line)
+        lines.append(separator)
+        
+        for row in data:
+            formatted_row = []
+            for i in range(len(row)):
+                val = str(row[i])
+                formatted_row.append(f" {val:<{widths[i]}} ")
+            lines.append("|" + "|".join(formatted_row) + "|")
+        
+        lines.append(separator)
+        return "\n".join(lines)
+
+
+
+    def process_statement_generation(self, iban, start_d, start_m, start_y, end_d, end_m, end_y):
+        start_date = f"{start_y}-{start_m.zfill(2)}-{start_d.zfill(2)} 00:00:00"
+        end_date = f"{end_y}-{end_m.zfill(2)}-{end_d.zfill(2)} 23:59:59"
+
+        sql = "CALL GenereazaExtras(%s, %s, %s)"
+        statement_data = self.app.ruleaza_query(sql, (iban, start_date, end_date))
+
+        if not statement_data:
+            messagebox.showinfo("Info", "Nu există tranzacții în perioada selectată.")
+            return
+
+        headers = ["DATA", "TIP", "SUMA", "PARTENER", "MOTIV"]
+        rows = []
+        for d, t, s, p, m in statement_data:
+            if t == 'Iesire':
+                sign = "-"
+            else:
+                sign = "+"
+
+            rows.append([
+                d.strftime('%d.%m.%Y %H:%M'), 
+                t, 
+                f"{sign}{s:.2f}", 
+                str(p), 
+                str(m)
+            ])
+
+        mysql_table = self.format_as_mysql_table(headers, rows)
+
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".txt",
+            initialfile=f"Extras_{iban}.txt",
+            title="Salvează Extrasul"
+        )
+        
+        if not file_path: 
+            return
+        
+        try:
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(f"EXTRAS CONT: {iban}\n")
+                f.write(f"PERIOADA: {start_date} - {end_date}\n")
+                f.write(f"GENERAT LA: {datetime.now().strftime('%d.%m.%Y %H:%M')}\n\n")
+                
+                f.write(mysql_table)
+                
+                f.write(f"\n\nDocument generat de Sistem Bancar Proiect 9\n")
+            
+            messagebox.showinfo("Succes", "Extras salvat în format MariaDB!")
+            self.display_account_hub(iban)
+            
+        except Exception as e:
+            messagebox.showerror("Eroare la scriere", f"Eroare: {e}")
