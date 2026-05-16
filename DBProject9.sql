@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3307
--- Generation Time: May 11, 2026 at 09:23 PM
+-- Generation Time: May 16, 2026 at 02:17 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -26,13 +26,10 @@ DELIMITER $$
 -- Procedures
 --
 CREATE DEFINER=`root`@`localhost` PROCEDURE `EfectueazaTransfer` (IN `p_iban_sursa` VARCHAR(34), IN `p_iban_destinatar` VARCHAR(34), IN `p_suma` DECIMAL(15,2), IN `p_motiv` VARCHAR(255))   BEGIN
-    DECLARE v_id_sursa INT;
-    DECLARE v_id_dest INT;
-    DECLARE v_sold_sursa DECIMAL(15,2);
+    DECLARE v_id_sursa, v_id_dest INT;
+    DECLARE v_sold_sursa, v_limita_minIMA DECIMAL(15,2);
     DECLARE v_moneda_sursa VARCHAR(3);
-    DECLARE v_limita_minima DECIMAL(15,2);
 
-    
     DECLARE EXIT HANDLER FOR SQLEXCEPTION 
     BEGIN
         ROLLBACK;
@@ -42,41 +39,23 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `EfectueazaTransfer` (IN `p_iban_sur
     START TRANSACTION;
 
     
-    SELECT id_cont, sold, moneda 
-    INTO v_id_sursa, v_sold_sursa, v_moneda_sursa
-    FROM conturi 
-    WHERE iban = p_iban_sursa FOR UPDATE;
+    SELECT id_cont, sold, moneda INTO v_id_sursa, v_sold_sursa, v_moneda_sursa FROM conturi WHERE iban = p_iban_sursa FOR UPDATE;
+    SELECT id_cont INTO v_id_dest FROM conturi WHERE iban = p_iban_destinatar FOR UPDATE;
+    SELECT min_transfer_limit INTO v_limita_minima FROM config_currencies WHERE currency_code = v_moneda_sursa;
 
     
-    SELECT id_cont INTO v_id_dest 
-    FROM conturi 
-    WHERE iban = p_iban_destinatar FOR UPDATE;
+    IF v_id_sursa IS NULL OR v_id_dest IS NULL THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'IBAN inexistent.'; END IF;
+    IF p_suma < v_limita_minima THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Suma sub limita minima.'; END IF;
+    IF v_sold_sursa < p_suma THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Fonduri insuficiente.'; END IF;
 
     
-    SELECT min_transfer_limit INTO v_limita_minima 
-    FROM config_currencies 
-    WHERE currency_code = v_moneda_sursa;
+    INSERT INTO transferuri (id_cont_sursa, id_cont_destinatie, suma, mesaj_detaliu)
+    VALUES (v_id_sursa, v_id_dest, p_suma, p_motiv);
 
-    
-    
-    IF v_id_sursa IS NULL OR v_id_dest IS NULL THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Eroare: IBAN inexistent în sistem.';
-    END IF;
-
-    IF p_suma < v_limita_minima THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Eroare: Suma este sub limita minima permisa.';
-    END IF;
-
-    IF v_sold_sursa < p_suma THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Eroare: Fonduri insuficiente.';
-    END IF;
-
-    
     
     
     INSERT INTO tranzactii (id_cont, tip_tranzactie, suma, iban_partener, motiv_plata)
     VALUES (v_id_sursa, 'Iesire', p_suma, p_iban_destinatar, p_motiv);
-
     
     INSERT INTO tranzactii (id_cont, tip_tranzactie, suma, iban_partener, motiv_plata)
     VALUES (v_id_dest, 'Intrare', p_suma, p_iban_sursa, p_motiv);
@@ -84,12 +63,28 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `EfectueazaTransfer` (IN `p_iban_sur
     COMMIT;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `GenereazaExtras` (IN `p_id_cont` INT)   BEGIN
-    SELECT 'Transfer Trimis' AS Tip, suma, data_transfer, mesaj_detaliu 
-    FROM transferuri WHERE id_cont_sursa = p_id_cont
-    UNION
-    SELECT 'Transfer Primit' AS Tip, suma, data_transfer, mesaj_detaliu 
-    FROM transferuri WHERE id_cont_destinatie = p_id_cont;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GenereazaExtras` (IN `p_iban` VARCHAR(24), IN `p_data_start` DATETIME, IN `p_data_end` DATETIME)   BEGIN
+    DECLARE v_id_cont INT;
+    DECLARE v_sold_actual DECIMAL(15,2);
+
+    SELECT id_cont, sold INTO v_id_cont, v_sold_actual
+    FROM conturi WHERE iban = p_iban;
+
+    
+    INSERT INTO extrasecont (id_cont, perioada_start, perioada_end, sold_initial, sold_final)
+    VALUES (v_id_cont, p_data_start, p_data_end, 0.00, v_sold_actual);
+
+    
+    SELECT 
+        data_tranzactie AS Data,
+        tip_tranzactie AS Tip,
+        suma AS Suma,
+        COALESCE(iban_partener, 'N/A') AS Partener,
+        COALESCE(motiv_plata, 'Fara detalii') AS Motiv
+    FROM tranzactii
+    WHERE id_cont = v_id_cont 
+      AND data_tranzactie BETWEEN p_data_start AND p_data_end
+    ORDER BY data_tranzactie DESC;
 END$$
 
 DELIMITER ;
@@ -147,7 +142,21 @@ INSERT INTO `audit_solduri` (`id_audit`, `id_cont`, `sold_vechi`, `sold_nou`, `d
 (32, 1, 800.00, 790.00, '2026-05-11 18:54:41'),
 (33, 2, 2100.00, 2110.00, '2026-05-11 18:54:41'),
 (34, 1, 790.00, 780.00, '2026-05-11 19:11:52'),
-(35, 2, 2110.00, 2120.00, '2026-05-11 19:11:52');
+(35, 2, 2110.00, 2120.00, '2026-05-11 19:11:52'),
+(36, 1, 780.00, 770.00, '2026-05-14 00:06:33'),
+(37, 2, 2120.00, 2130.00, '2026-05-14 00:06:33'),
+(38, 1, 770.00, 760.00, '2026-05-14 00:06:47'),
+(39, 3, 5000.00, 5010.00, '2026-05-14 00:06:47'),
+(40, 1, 760.00, 750.00, '2026-05-14 00:07:01'),
+(41, 4, 1200.50, 1210.50, '2026-05-14 00:07:01'),
+(42, 1, 750.00, 650.00, '2026-05-14 20:26:38'),
+(43, 2, 2130.00, 2230.00, '2026-05-14 20:26:38'),
+(44, 1, 650.00, 550.00, '2026-05-14 22:55:50'),
+(45, 2, 2230.00, 2330.00, '2026-05-14 22:55:50'),
+(46, 1, 550.00, 540.00, '2026-05-15 07:29:43'),
+(47, 3, 5010.00, 5020.00, '2026-05-15 07:29:43'),
+(48, 1, 540.00, 530.00, '2026-05-15 07:30:01'),
+(49, 11, 10.00, 20.00, '2026-05-15 07:30:01');
 
 -- --------------------------------------------------------
 
@@ -167,9 +176,12 @@ CREATE TABLE `beneficiari` (
 --
 
 INSERT INTO `beneficiari` (`id_beneficiar`, `id_client`, `nume_beneficiar`, `iban_beneficiar`) VALUES
-(1, 1, 'Ana Popescu', 'RO44INGB0000555566667777'),
-(2, 1, 'Maria Ionescu', 'RO30BTRL0000333344445555'),
-(3, 1, 'George Vasile', 'RO40BTRL0000444455556666');
+(1, 1, 'Popescu Ana', 'RO44INGB0000555566667777'),
+(2, 1, 'Ionescu Maria', 'RO30BTRL0000333344445555'),
+(3, 1, 'Popa George', 'RO40BTRL0000444455556666'),
+(7, 1, 'Marin Andrei', 'RO60BTRL0000666677778888'),
+(11, 1, 'Lupu Elena', 'RO44INGB0000222200002222'),
+(16, 1, 'Dinca Robert', 'RO50BTRL0000555500005555');
 
 -- --------------------------------------------------------
 
@@ -199,7 +211,17 @@ INSERT INTO `clienti` (`id_client`, `tip_client`, `email`, `telefon`, `data_ader
 (7, 'PF', 'cristi@email.com', '0788111222', '2026-05-08 23:16:37'),
 (8, 'PF', 'raluca@email.com', '0799111222', '2026-05-08 23:16:37'),
 (9, 'PF', 'stefan@email.com', '0722333444', '2026-05-08 23:16:37'),
-(10, 'PF', 'ioana@email.com', '0733555666', '2026-05-08 23:16:37');
+(10, 'PF', 'ioana@email.com', '0733555666', '2026-05-08 23:16:37'),
+(11, 'PF', 'andrei.pop@email.com', '0722111001', '2026-05-14 23:52:56'),
+(12, 'PF', 'elena.lupu@email.com', '0722111002', '2026-05-14 23:52:56'),
+(13, 'PF', 'mihai.ionescu@email.com', '0722111003', '2026-05-14 23:52:56'),
+(14, 'PF', 'claudia.stan@email.com', '0722111004', '2026-05-14 23:52:56'),
+(15, 'PF', 'robert.dinca@email.com', '0722111005', '2026-05-14 23:52:56'),
+(16, 'PF', 'simona.georgescu@email.com', '0722111006', '2026-05-14 23:52:56'),
+(17, 'PF', 'vlad.matei@email.com', '0722111007', '2026-05-14 23:52:56'),
+(18, 'PF', 'adrian.negru@email.com', '0722111008', '2026-05-14 23:52:56'),
+(19, 'PF', 'laura.enache@email.com', '0722111009', '2026-05-14 23:52:56'),
+(20, 'PF', 'bogdan.toma@email.com', '0722111010', '2026-05-14 23:52:56');
 
 -- --------------------------------------------------------
 
@@ -245,12 +267,22 @@ CREATE TABLE `conturi` (
 --
 
 INSERT INTO `conturi` (`id_cont`, `id_client`, `id_tip_cont`, `iban`, `sold`, `data_deschidere`, `status`, `moneda`) VALUES
-(1, 1, 1, 'RO12BTRL0000111122223333', 780.00, '2026-04-29', 'Activ', 'RON'),
-(2, 2, 1, 'RO44INGB0000555566667777', 2120.00, '2026-04-29', 'Activ', 'RON'),
-(3, 3, 1, 'RO30BTRL0000333344445555', 5000.00, '2026-05-09', 'Activ', 'RON'),
-(4, 4, 1, 'RO40BTRL0000444455556666', 1200.50, '2026-05-09', 'Activ', 'RON'),
+(1, 1, 1, 'RO12BTRL0000111122223333', 530.00, '2026-04-29', 'Activ', 'RON'),
+(2, 2, 1, 'RO44INGB0000555566667777', 2330.00, '2026-04-29', 'Activ', 'RON'),
+(3, 3, 1, 'RO30BTRL0000333344445555', 5020.00, '2026-05-09', 'Activ', 'RON'),
+(4, 4, 1, 'RO40BTRL0000444455556666', 1210.50, '2026-05-09', 'Activ', 'RON'),
 (5, 5, 1, 'RO50BTRL0000555566667777', 340.00, '2026-05-09', 'Activ', 'RON'),
-(6, 6, 1, 'RO60BTRL0000666677778888', 9000.00, '2026-05-09', 'Activ', 'RON');
+(6, 6, 1, 'RO60BTRL0000666677778888', 9000.00, '2026-05-09', 'Activ', 'RON'),
+(7, 11, 1, 'RO12BTRL0000111100001111', 1500.00, '2026-05-15', 'Activ', 'RON'),
+(8, 12, 1, 'RO44INGB0000222200002222', 2300.00, '2026-05-15', 'Activ', 'RON'),
+(9, 13, 1, 'RO30RNBB0000333300003333', 500.00, '2026-05-15', 'Activ', 'RON'),
+(10, 14, 1, 'RO40BCRB0000444400004444', 4200.50, '2026-05-15', 'Activ', 'RON'),
+(11, 15, 1, 'RO50BTRL0000555500005555', 20.00, '2026-05-15', 'Activ', 'RON'),
+(12, 16, 1, 'RO60INGB0000666600006666', 9900.00, '2026-05-15', 'Activ', 'RON'),
+(13, 17, 1, 'RO70RNBB0000777700007777', 120.00, '2026-05-15', 'Activ', 'RON'),
+(14, 18, 1, 'RO80BCRB0000888800008888', 3500.00, '2026-05-15', 'Activ', 'RON'),
+(15, 19, 1, 'RO90BTRL0000999900009999', 850.00, '2026-05-15', 'Activ', 'RON'),
+(16, 20, 1, 'RO00INGB0000101000001010', 45.00, '2026-05-15', 'Activ', 'RON');
 
 --
 -- Triggers `conturi`
@@ -302,7 +334,17 @@ INSERT INTO `detalii_pf` (`id_client`, `nume`, `prenume`, `cnp`) VALUES
 (7, 'Stoica', 'Cristian', '1800101123456'),
 (8, 'Dinu', 'Raluca', '2950101123456'),
 (9, 'Nistor', 'Stefan', '1820101123456'),
-(10, 'Lazar', 'Ioana', '2980101123456');
+(10, 'Lazar', 'Ioana', '2980101123456'),
+(11, 'Pop', 'Andrei', '1800101990011'),
+(12, 'Lupu', 'Elena', '2900101990012'),
+(13, 'Ionescu', 'Mihai', '1850101990013'),
+(14, 'Stan', 'Claudia', '2920101990014'),
+(15, 'Dinca', 'Robert', '1880101990015'),
+(16, 'Georgescu', 'Simona', '2950101990016'),
+(17, 'Matei', 'Vlad', '1820101990017'),
+(18, 'Negru', 'Adrian', '1780101990018'),
+(19, 'Enache', 'Laura', '2980101990019'),
+(20, 'Toma', 'Bogdan', '1930101990020');
 
 -- --------------------------------------------------------
 
@@ -348,6 +390,19 @@ CREATE TABLE `notificari` (
   `data_trimitere` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `notificari`
+--
+
+INSERT INTO `notificari` (`id_notificare`, `id_client`, `titlu`, `mesaj`, `status_citit`, `data_trimitere`) VALUES
+(1, 2, 'Bani primiti', 'Ai primit 10.00 RON. Detalii: Pentru paine', 0, '2026-05-14 00:06:33'),
+(2, 3, 'Bani primiti', 'Ai primit 10.00 RON. Detalii: Nu ii spune Anei', 0, '2026-05-14 00:06:47'),
+(3, 4, 'Bani primiti', 'Ai primit 10.00 RON. Detalii: Datoria de la pacanele', 0, '2026-05-14 00:07:01'),
+(4, 2, 'Bani primiti', 'Ai primit 100.00 RON. Detalii: Ma falimentezi, femeie', 0, '2026-05-14 20:26:38'),
+(5, 2, 'Bani primiti', 'Ai primit 100.00 RON. Detalii: 123', 0, '2026-05-14 22:55:50'),
+(6, 3, 'Bani primiti', 'Ai primit 10.00 RON. Detalii: Fara Motiv. Enjoy', 0, '2026-05-15 07:29:43'),
+(7, 15, 'Bani primiti', 'Ai primit 10.00 RON. Detalii: Taxa de Protectie', 0, '2026-05-15 07:30:01');
+
 -- --------------------------------------------------------
 
 --
@@ -390,7 +445,14 @@ CREATE TABLE `transferuri` (
 --
 
 INSERT INTO `transferuri` (`id_transfer`, `id_cont_sursa`, `id_cont_destinatie`, `suma`, `mesaj_detaliu`, `data_transfer`) VALUES
-(2, 1, 2, 100.00, 'Test transfer', '2026-04-28 22:38:47');
+(2, 1, 2, 100.00, 'Test transfer', '2026-04-28 22:38:47'),
+(3, 1, 2, 10.00, 'Pentru paine', '2026-05-14 00:06:33'),
+(4, 1, 3, 10.00, 'Nu ii spune Anei', '2026-05-14 00:06:47'),
+(5, 1, 4, 10.00, 'Datoria de la pacanele', '2026-05-14 00:07:01'),
+(6, 1, 2, 100.00, 'Ma falimentezi, femeie', '2026-05-14 20:26:38'),
+(7, 1, 2, 100.00, '123', '2026-05-14 22:55:50'),
+(8, 1, 3, 10.00, 'Fara Motiv. Enjoy', '2026-05-15 07:29:43'),
+(9, 1, 11, 10.00, 'Taxa de Protectie', '2026-05-15 07:30:01');
 
 --
 -- Triggers `transferuri`
@@ -426,35 +488,20 @@ CREATE TABLE `tranzactii` (
 --
 
 INSERT INTO `tranzactii` (`id_tranzactie`, `id_cont`, `tip_tranzactie`, `suma`, `iban_partener`, `motiv_plata`, `data_tranzactie`) VALUES
-(1, 2, 'Intrare', 400.00, NULL, NULL, '2026-04-28 22:40:30'),
-(2, 1, 'Iesire', 100.00, NULL, NULL, '2026-05-09 22:54:25'),
-(3, 2, 'Intrare', 100.00, NULL, NULL, '2026-05-09 22:54:25'),
-(4, 1, 'Iesire', 100.00, NULL, NULL, '2026-05-09 22:54:45'),
-(5, 2, 'Intrare', 100.00, NULL, NULL, '2026-05-09 22:54:45'),
-(6, 1, 'Iesire', 100.00, NULL, NULL, '2026-05-09 23:22:12'),
-(7, 2, 'Intrare', 100.00, NULL, NULL, '2026-05-09 23:22:12'),
-(8, 1, 'Iesire', 10.00, NULL, NULL, '2026-05-10 01:03:34'),
-(9, 2, 'Intrare', 10.00, NULL, NULL, '2026-05-10 01:03:34'),
-(10, 1, 'Iesire', 10.00, NULL, NULL, '2026-05-10 01:12:32'),
-(11, 2, 'Intrare', 10.00, NULL, NULL, '2026-05-10 01:12:32'),
-(12, 1, 'Iesire', 10.00, NULL, NULL, '2026-05-10 01:12:54'),
-(13, 2, 'Intrare', 10.00, NULL, NULL, '2026-05-10 01:12:54'),
-(14, 1, 'Iesire', 10.00, NULL, NULL, '2026-05-10 01:18:16'),
-(15, 2, 'Intrare', 10.00, NULL, NULL, '2026-05-10 01:18:16'),
-(16, 1, 'Iesire', 10.00, NULL, NULL, '2026-05-10 02:25:34'),
-(17, 2, 'Intrare', 10.00, NULL, NULL, '2026-05-10 02:25:34'),
-(18, 1, 'Iesire', 100.00, NULL, NULL, '2026-05-10 19:40:03'),
-(19, 2, 'Intrare', 100.00, NULL, NULL, '2026-05-10 19:40:03'),
-(20, 1, 'Iesire', 100.00, NULL, NULL, '2026-05-10 20:02:26'),
-(21, 2, 'Intrare', 100.00, NULL, NULL, '2026-05-10 20:02:26'),
-(22, 1, 'Iesire', 150.00, NULL, NULL, '2026-05-10 22:07:43'),
-(23, 2, 'Intrare', 150.00, NULL, NULL, '2026-05-10 22:07:43'),
-(25, 1, 'Iesire', 100.00, 'RO44INGB0000555566667777', 'Motiv', '2026-05-11 17:55:40'),
-(26, 2, 'Intrare', 100.00, 'RO12BTRL0000111122223333', 'Motiv', '2026-05-11 17:55:40'),
-(27, 1, 'Iesire', 10.00, 'RO44INGB0000555566667777', 'Motiv', '2026-05-11 18:54:41'),
-(28, 2, 'Intrare', 10.00, 'RO12BTRL0000111122223333', 'Motiv', '2026-05-11 18:54:41'),
-(29, 1, 'Iesire', 10.00, 'RO44INGB0000555566667777', 'Motiv', '2026-05-11 19:11:52'),
-(30, 2, 'Intrare', 10.00, 'RO12BTRL0000111122223333', 'Motiv', '2026-05-11 19:11:52');
+(1, 1, 'Iesire', 10.00, 'RO44INGB0000555566667777', 'Pentru paine', '2026-05-14 00:06:33'),
+(2, 2, 'Intrare', 10.00, 'RO12BTRL0000111122223333', 'Pentru paine', '2026-05-14 00:06:33'),
+(3, 1, 'Iesire', 10.00, 'RO30BTRL0000333344445555', 'Nu ii spune Anei', '2026-05-14 00:06:47'),
+(4, 3, 'Intrare', 10.00, 'RO12BTRL0000111122223333', 'Nu ii spune Anei', '2026-05-14 00:06:47'),
+(5, 1, 'Iesire', 10.00, 'RO40BTRL0000444455556666', 'Datoria de la pacanele', '2026-05-14 00:07:01'),
+(6, 4, 'Intrare', 10.00, 'RO12BTRL0000111122223333', 'Datoria de la pacanele', '2026-05-14 00:07:01'),
+(7, 1, 'Iesire', 100.00, 'RO44INGB0000555566667777', 'Ma falimentezi, femeie', '2026-05-14 20:26:38'),
+(8, 2, 'Intrare', 100.00, 'RO12BTRL0000111122223333', 'Ma falimentezi, femeie', '2026-05-14 20:26:38'),
+(9, 1, 'Iesire', 100.00, 'RO44INGB0000555566667777', '123', '2026-05-14 22:55:50'),
+(10, 2, 'Intrare', 100.00, 'RO12BTRL0000111122223333', '123', '2026-05-14 22:55:50'),
+(11, 1, 'Iesire', 10.00, 'RO30BTRL0000333344445555', 'Fara Motiv. Enjoy', '2026-05-15 07:29:43'),
+(12, 3, 'Intrare', 10.00, 'RO12BTRL0000111122223333', 'Fara Motiv. Enjoy', '2026-05-15 07:29:43'),
+(13, 1, 'Iesire', 10.00, 'RO50BTRL0000555500005555', 'Taxa de Protectie', '2026-05-15 07:30:01'),
+(14, 11, 'Intrare', 10.00, 'RO12BTRL0000111122223333', 'Taxa de Protectie', '2026-05-15 07:30:01');
 
 --
 -- Triggers `tranzactii`
@@ -584,7 +631,8 @@ ALTER TABLE `audit_solduri`
 --
 ALTER TABLE `beneficiari`
   ADD PRIMARY KEY (`id_beneficiar`),
-  ADD KEY `fk_beneficiar_client` (`id_client`);
+  ADD KEY `fk_beneficiar_client` (`id_client`),
+  ADD KEY `fk_beneficiar_iban` (`iban_beneficiar`);
 
 --
 -- Indexes for table `clienti`
@@ -668,37 +716,37 @@ ALTER TABLE `tranzactii`
 -- AUTO_INCREMENT for table `audit_solduri`
 --
 ALTER TABLE `audit_solduri`
-  MODIFY `id_audit` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+  MODIFY `id_audit` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
 
 --
 -- AUTO_INCREMENT for table `beneficiari`
 --
 ALTER TABLE `beneficiari`
-  MODIFY `id_beneficiar` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id_beneficiar` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `clienti`
 --
 ALTER TABLE `clienti`
-  MODIFY `id_client` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id_client` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `conturi`
 --
 ALTER TABLE `conturi`
-  MODIFY `id_cont` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id_cont` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `extrasecont`
 --
 ALTER TABLE `extrasecont`
-  MODIFY `id_extras` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id_extras` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `notificari`
 --
 ALTER TABLE `notificari`
-  MODIFY `id_notificare` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id_notificare` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `tipuricont`
@@ -710,13 +758,13 @@ ALTER TABLE `tipuricont`
 -- AUTO_INCREMENT for table `transferuri`
 --
 ALTER TABLE `transferuri`
-  MODIFY `id_transfer` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id_transfer` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `tranzactii`
 --
 ALTER TABLE `tranzactii`
-  MODIFY `id_tranzactie` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
+  MODIFY `id_tranzactie` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- Constraints for dumped tables
@@ -726,7 +774,8 @@ ALTER TABLE `tranzactii`
 -- Constraints for table `beneficiari`
 --
 ALTER TABLE `beneficiari`
-  ADD CONSTRAINT `fk_beneficiar_client` FOREIGN KEY (`id_client`) REFERENCES `clienti` (`id_client`) ON DELETE CASCADE;
+  ADD CONSTRAINT `fk_beneficiar_client` FOREIGN KEY (`id_client`) REFERENCES `clienti` (`id_client`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_beneficiar_iban` FOREIGN KEY (`iban_beneficiar`) REFERENCES `conturi` (`iban`);
 
 --
 -- Constraints for table `conturi`

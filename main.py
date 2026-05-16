@@ -112,7 +112,23 @@ class AppBancara(ctk.CTk):
 
     def ruleaza_query(self, sql, params=None, fetch=True):
         """Logica de conectare la baza de date."""
-        return self.db.ruleaza_query(sql, params, fetch)
+        connection = None
+        try:
+            connection = mysql.connector.connect(**self.db_config)
+            cursor = connection.cursor()
+            cursor.execute(sql, params or ())
+            rezultat = cursor.fetchall() if fetch else None
+
+            if not fetch:
+                connection.commit()
+            return rezultat
+        
+        except Exception as e:
+            messagebox.showerror("Eroare Baza de Date", str(e))
+            raise e
+        finally:
+            if connection and connection.is_connected(): 
+                connection.close()
 
 if __name__ == "__main__":
     app = AppBancara()

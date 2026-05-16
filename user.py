@@ -103,7 +103,7 @@ class User:
                 ("New Transfer", lambda: self.display_contacts(iban)),
                 ("History", lambda: self.afiseaza_istoric(iban)),
                 ("Statement", lambda: self.statements_interface(iban)),
-                ("Beneficiaries", lambda: print("Contacts Page"))
+                ("Beneficiaries", lambda: self.display_beneficiaries(iban))
             ]
 
             for i, (text, cmd) in enumerate(buttons):
@@ -132,7 +132,7 @@ class User:
         self.curata_content()
         self.app.add_label(self.content, "SELECT RECIPIENT", type="h1", pady=20)
 
-        scroll_frame = ctk.CTkScrollableFrame(self.content, width=500, height=300, fg_color=self.app.theme["bg_dark"], scrollbar_button_color=self.app.theme["btn_accent"], scrollbar_button_hover_color=self.app.theme["btn_hover"])
+        scroll_frame = ctk.CTkScrollableFrame(self.content, width=500, height=300, fg_color=self.app.theme["bg_dark"], **self.app.styles["scrollbar"])
         scroll_frame.pack(pady=10, padx=10)
 
         contacts = self.app.ruleaza_query("SELECT nume_beneficiar, iban_beneficiar FROM beneficiari WHERE id_client = %s", (self.client_id,))
@@ -178,16 +178,12 @@ class User:
         ctk.CTkButton(
             self.content, 
             text="CONFIRM & SEND", 
-            fg_color=self.app.theme["success"],
-            hover_color=self.app.theme["success_hover"],
-            text_color=self.app.theme["bg_dark"],
             width=180, height=35,
-            font=("Roboto", 13, "bold"),
-            command=lambda: self.new_transfer(source_iban)
+            command=lambda: self.new_transfer(source_iban),
+            **self.app.styles["btn_confirm"]
         ).pack(pady=20)
 
-        ctk.CTkButton(self.content, text="← Back to contacts", fg_color="transparent", text_color=self.app.theme["text_dim"], 
-                      command=lambda: self.display_contacts(source_iban)).pack()
+        ctk.CTkButton(self.content, text="← Înapoi",command=lambda: self.display_contacts(source_iban), **self.app.styles["btn_back"]).pack()
         
 
     def _add_row_label(self, container, text, type):
@@ -209,7 +205,7 @@ class User:
     def _construieste_istoric_ui(self, iban_ales, tranzactii):
         self.app.add_label(self.content, f"ISTORIC: {iban_ales}", type="h2")
 
-        scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent", scrollbar_button_color=self.app.theme["btn_accent"], scrollbar_button_hover_color=self.app.theme["btn_hover"])
+        scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent", **self.app.styles["scrollbar"])
         scroll.pack(fill="both", expand=True, padx=10, pady=10)
 
         if not tranzactii:
@@ -220,7 +216,7 @@ class User:
 
         nav_frame = ctk.CTkFrame(self.content, fg_color="transparent")
         nav_frame.pack(side="bottom", fill="x", pady=10)
-        ctk.CTkButton(nav_frame, text="← Înapoi", width=150, command=lambda: self.display_account_hub(iban_ales), **self.app.styles["card"]).pack()
+        ctk.CTkButton(nav_frame, text="← Înapoi", command=lambda: self.display_account_hub(iban_ales), **self.app.styles["btn_back"]).pack()
 
     def _creeaza_rand_tranzactie(self, parent, data_t):
         data, entitate, suma, tip, iban_partener, motiv_plata = data_t
@@ -302,8 +298,7 @@ class User:
 
         ctk.CTkButton(
             buttons_container, 
-            text="← Înapoi", 
-            width=250, height=35,
+            text="← Înapoi",
             command=lambda: self.display_account_hub(iban),
             **self.app.styles["btn_back"]
         ).pack(pady=5)
@@ -392,3 +387,181 @@ class User:
             
         except Exception as e:
             messagebox.showerror("Eroare la scriere", f"Eroare: {e}")
+
+
+
+    
+    def display_beneficiaries(self, source_iban=None):
+        self.content.pack_forget()
+        self.curata_content()
+        self.app.add_label(self.content, "AGENDA BENEFICIARI", type="h1", pady=(10, 20))
+
+        search_frame = ctk.CTkFrame(self.content, fg_color="transparent")
+        search_frame.pack(fill="x", padx=10, pady=5)
+        
+        self.search_entry = ctk.CTkEntry(search_frame, placeholder_text="Caută după nume sau IBAN...", width=350, **self.app.styles["input"])
+        self.search_entry.pack(side="left", padx=5)
+        self.search_entry.bind("<KeyRelease>", lambda e: self.refresh_beneficiary_table())
+
+        ctk.CTkButton(search_frame, text="+ Adaugă", width=100, fg_color=self.app.theme["success"], command=self.add_beneficiary_form).pack(side="right", padx=5)
+
+        self.table_frame = ctk.CTkScrollableFrame(self.content, fg_color=self.app.theme["bg_dark"], **self.app.styles["scrollbar"])
+        self.table_frame.pack(pady=10, fill="both", expand=True)
+
+        ctk.CTkButton(
+            self.content, 
+            text="← Înapoi", 
+            command=lambda: self.display_account_hub(source_iban),
+            **self.app.styles["btn_back"]
+        ).pack(pady=(2, 2))
+
+        self.content.pack(side="right", expand=True, fill="both", padx=20, pady=20)
+
+        self.app.bind("<Button-1>", lambda e: self.app.focus() if "entry" not in str(e.widget).lower() else None)
+
+        self.refresh_beneficiary_table()
+
+    def get_bank_info(self, iban):
+        code = iban[4:8].upper()    # Extrage codul băncii (ex: BTRL)
+        bm = self.app.theme.get("bank_map", {})
+        return bm.get(code, bm.get("GENERIC", {"name": "???", "color": "#404040", "text": "#FFFFFF"}))
+
+
+    def refresh_beneficiary_table(self):
+        search_query = self.search_entry.get().lower() if hasattr(self, 'search_entry') else ""
+        
+        for widget in self.table_frame.winfo_children(): widget.destroy()
+
+        contacts = self.app.ruleaza_query("SELECT nume_beneficiar, iban_beneficiar FROM beneficiari WHERE id_client = %s ORDER BY nume_beneficiar ASC", (self.client_id,))
+
+        has_results = False
+        for name, iban in contacts:
+            if search_query and search_query not in name.lower() and search_query not in iban.lower():
+                continue
+            
+            has_results = True
+            bank = self.get_bank_info(iban)
+
+            b_color = bank["color"]
+            
+            row = ctk.CTkFrame(self.table_frame, **self.app.styles["transaction_row"], height=55, corner_radius=12)
+            row.pack(fill="x", pady=4, padx=5)
+            row.pack_propagate(False)
+
+            BADGE_WIDTH = 45
+            BADGE_HEIGHT = 25
+
+            badge = ctk.CTkFrame(
+                row, 
+                width=BADGE_WIDTH, 
+                height=BADGE_HEIGHT, 
+                fg_color="transparent", 
+                border_width=2, 
+                border_color=b_color, 
+                corner_radius=6
+            )
+            badge.pack(side="left", padx=(15, 5), pady=12)
+            badge.pack_propagate(False)
+
+            ctk.CTkLabel(
+                badge, 
+                text=bank["name"], 
+                font=("Roboto", 10, "bold"), 
+                text_color=b_color
+            ).pack(expand=True, fill="both")
+
+            info_col = ctk.CTkFrame(row, fg_color="transparent")
+            info_col.pack(side="left", padx=10, fill="y", pady=5)
+            ctk.CTkLabel(info_col, text=name, font=("Roboto", 13, "bold"), anchor="w").pack(fill="x")
+            ctk.CTkLabel(info_col, text=iban, font=("Courier New", 11), text_color=self.app.theme["text_dim"], anchor="w").pack(fill="x")
+
+            btn_del = ctk.CTkButton(
+                row, text="🗑", width=30, height=30, 
+                fg_color="transparent", 
+                text_color=self.app.theme["danger"],
+                hover_color="#331a1a",
+                command=lambda i=iban: self.delete_specific_beneficiary(i)
+            )
+            btn_del.pack(side="right", padx=15)
+
+        if not has_results:
+            self.app.add_label(self.table_frame, "Niciun rezultat găsit.", type="dim", pady=20)
+
+
+ 
+    def delete_selected_beneficiary(self):
+        if not self.selected_beneficiary_iban: return
+
+        if messagebox.askyesno("Confirmare", f"Sigur vrei să ștergi beneficiarul cu IBAN-ul {self.selected_beneficiary_iban}?"):
+            sql = "DELETE FROM beneficiari WHERE id_client = %s AND iban_beneficiar = %s"
+
+            self.app.ruleaza_query(sql, (self.client_id, self.selected_beneficiary_iban), fetch=False)
+            messagebox.showinfo("Succes", "Beneficiarul a fost eliminat cu succes din agenda ta!")
+
+            self.selected_row_frame = None 
+            self.selected_beneficiary_iban = None
+            self.delete_btn.configure(state="disabled")
+
+            self.refresh_beneficiary_table()
+
+
+
+    def delete_specific_beneficiary(self, iban):
+        if messagebox.askyesno("Confirmare", f"Sigur vrei să ștergi beneficiarul cu IBAN-ul {iban}?"):
+            sql = "DELETE FROM beneficiari WHERE id_client = %s AND iban_beneficiar = %s"
+            self.app.ruleaza_query(sql, (self.client_id, iban), fetch=False)
+            messagebox.showinfo("Succes", "Beneficiar șters!")
+            self.refresh_beneficiary_table()
+
+
+
+
+    def add_beneficiary_form(self):
+        self.curata_content()
+        self.app.add_label(self.content, "ADĂUGARE BENEFICIAR", type="h2", pady=10)
+
+        form_frame = ctk.CTkFrame(self.content, fg_color="transparent")
+        form_frame.pack(expand=True)
+
+        self.app.add_label(form_frame, "Nume Complet:", type="form")
+        name_entry = ctk.CTkEntry(form_frame, width=300, placeholder_text = "Ion Popescu", **self.app.styles["input"])
+        name_entry.pack(pady=(0, 15))
+
+        self.app.add_label(form_frame, "IBAN Beneficiar:", type="form")
+        iban_entry = ctk.CTkEntry(form_frame, width=300, placeholder_text="RO00 BTRL 0000 0000 0000 0000", **self.app.styles["input"])
+        iban_entry.pack(pady=(0, 25))
+
+        btn_save = ctk.CTkButton(
+            form_frame, text="SALVEAZĂ", 
+            width=200, height=35,
+            command=lambda: self._save_beneficiary(name_entry.get(), iban_entry.get()),
+            **self.app.styles["btn_confirm"]
+        )
+        btn_save.pack(pady=10)
+
+        ctk.CTkButton(form_frame, text="Anulează", command=self.display_beneficiaries, **self.app.styles["btn_back"]).pack()
+
+    def _save_beneficiary(self, name, iban):
+        name = name.strip().title()
+        iban = iban.replace(" ", "").strip().upper()
+
+        if not name or not iban:
+            messagebox.showwarning("Eroare", "Toate câmpurile sunt obligatorii!")
+            return
+        
+        check_sql = "SELECT id_beneficiar FROM beneficiari WHERE id_client = %s AND iban_beneficiar = %s"
+        exista = self.app.ruleaza_query(check_sql, (self.client_id, iban))
+        
+        if exista:
+            messagebox.showwarning("Atenție", "Acest beneficiar există deja în agenda ta!")
+            return
+        
+        if len(iban) != 24:
+            messagebox.showerror("Eroare", "IBAN-ul trebuie să aibă exact 24 de caractere!")
+            return
+        
+        sql = "INSERT INTO beneficiari (id_client, nume_beneficiar, iban_beneficiar) VALUES (%s, %s, %s)"
+        
+        self.app.ruleaza_query(sql, (self.client_id, name, iban), False)
+        messagebox.showinfo("Succes", "Beneficiar adăugat!")
+        self.display_beneficiaries()
