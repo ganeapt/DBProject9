@@ -23,7 +23,10 @@ class User:
         self.toggle_button.pack(anchor="nw", pady=10, padx=10)
         
         self.button_situatie = ctk.CTkButton(self.sidebar, text="Situație Conturi", command=self.afiseaza_situatie_conturi, **self.app.styles["card"])
-        self.button_situatie.pack(pady=10, padx=10, fill="x")
+        self.button_situatie.pack(pady=5, padx=10, fill="x")
+
+        self.button_notificari = ctk.CTkButton(self.sidebar, text="Notificări", command=self.display_notifications, **self.app.styles["card"])
+        self.button_notificari.pack(pady=5, padx=10, fill="x")
 
         self.button_logout = ctk.CTkButton(self.sidebar, text="Log Out", fg_color=self.app.theme["danger"], hover_color=self.app.theme["danger_hover"], command=self.app.afiseaza_dashboard)
         self.button_logout.pack(side="bottom", pady=20, padx=10, fill="x")
@@ -42,12 +45,14 @@ class User:
     def toggle_menu(self):
         if self.menu_expanded:
             self.button_situatie.pack_forget()
+            self.button_notificari.pack_forget()
             self.button_logout.configure(text="X")
             self.sidebar.configure(width=60)
             self.menu_expanded = False
         else:
             self.sidebar.configure(width=200)
-            self.button_situatie.pack(pady=10, padx=10, fill="x")
+            self.button_situatie.pack(pady=5, padx=10, fill="x")
+            self.button_notificari.pack(pady=5, padx=10, fill="x")
             self.button_logout.configure(text="Log Out")
             self.button_logout.pack_forget()
             self.button_logout.pack(side="bottom", pady=20, padx=10, fill="x")
@@ -565,3 +570,59 @@ class User:
         self.app.ruleaza_query(sql, (self.client_id, name, iban), False)
         messagebox.showinfo("Succes", "Beneficiar adăugat!")
         self.display_beneficiaries()
+
+
+
+    def update_notification_badge(self):
+        """Numără notificările necitite și schimbă textul butonului din sidebar."""
+        sql = "SELECT COUNT(*) FROM notificari WHERE id_client = %s AND status_citit = 0"
+        rezultat = self.app.ruleaza_query(sql, (self.client_id,))
+        
+        if rezultat:
+            nr_necitite = rezultat[0][0]
+        else:
+            nr_necitite = 0
+
+        if nr_necitite > 0:
+            self.button_notificari.configure(text=f"Notificări ({nr_necitite})")
+        else:
+            self.button_notificari.configure(text="Notificări")
+
+    
+    def display_notifications(self):
+        self.curata_content()
+        self.app.add_label(self.content, "NOTIFICĂRI CLIENT", type="h1", pady=(10, 20))
+
+        scroll_frame = ctk.CTkScrollableFrame(self.content, fg_color=self.app.theme["bg_dark"], **self.app.styles["scrollbar"])
+        scroll_frame.pack(pady=10, fill="both", expand=True)
+
+        sql = "SELECT titlu, mesaj, data_trimitere FROM notificari WHERE id_client = %s ORDER BY data_trimitere DESC"
+        notificari = self.app.ruleaza_query(sql, (self.client_id,))
+
+        if not notificari:
+            self.app.add_label(scroll_frame, "Nu ai nicio notificare primită.", type="dim", pady=20)
+        else:
+            for titlu, mesaj, data_t in notificari:
+                row = ctk.CTkFrame(scroll_frame, **self.app.styles["transaction_row"])
+                row.pack(fill="x", pady=5, padx=5)
+
+                txt_col = ctk.CTkFrame(row, fg_color="transparent")
+                txt_col.pack(side="left", padx=15, pady=10, fill="x", expand=True)
+
+                data_str = data_t.strftime('%d.%m.%Y %H:%M')
+
+                self._add_row_label(txt_col, data_str, "lbl_data")
+                self._add_row_label(txt_col, titlu.upper(), "lbl_primary")
+                self._add_row_label(txt_col, mesaj, "lbl_secondary")
+
+        ctk.CTkButton(
+            self.content, 
+            text="← Înapoi",
+            command=self.afiseaza_situatie_conturi,
+            **self.app.styles["btn_back"]
+        ).pack(pady=10)
+
+        update_sql = "UPDATE notificari SET status_citit = 1 WHERE id_client = %s AND status_citit = 0"
+        self.app.ruleaza_query(update_sql, (self.client_id,), fetch=False)
+        
+        self.button_notificari.configure(text="Notificări")

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3307
--- Generation Time: May 16, 2026 at 02:17 AM
+-- Generation Time: May 16, 2026 at 03:04 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -156,7 +156,11 @@ INSERT INTO `audit_solduri` (`id_audit`, `id_cont`, `sold_vechi`, `sold_nou`, `d
 (46, 1, 550.00, 540.00, '2026-05-15 07:29:43'),
 (47, 3, 5010.00, 5020.00, '2026-05-15 07:29:43'),
 (48, 1, 540.00, 530.00, '2026-05-15 07:30:01'),
-(49, 11, 10.00, 20.00, '2026-05-15 07:30:01');
+(49, 11, 10.00, 20.00, '2026-05-15 07:30:01'),
+(50, 2, 2330.00, 1830.00, '2026-05-16 00:29:20'),
+(51, 1, 530.00, 1030.00, '2026-05-16 00:29:20'),
+(52, 2, 1830.00, 1820.00, '2026-05-16 00:29:42'),
+(53, 1, 1030.00, 1040.00, '2026-05-16 00:29:42');
 
 -- --------------------------------------------------------
 
@@ -181,7 +185,8 @@ INSERT INTO `beneficiari` (`id_beneficiar`, `id_client`, `nume_beneficiar`, `iba
 (3, 1, 'Popa George', 'RO40BTRL0000444455556666'),
 (7, 1, 'Marin Andrei', 'RO60BTRL0000666677778888'),
 (11, 1, 'Lupu Elena', 'RO44INGB0000222200002222'),
-(16, 1, 'Dinca Robert', 'RO50BTRL0000555500005555');
+(16, 1, 'Dinca Robert', 'RO50BTRL0000555500005555'),
+(19, 2, 'Ionescu Ion', 'RO12BTRL0000111122223333');
 
 -- --------------------------------------------------------
 
@@ -267,8 +272,8 @@ CREATE TABLE `conturi` (
 --
 
 INSERT INTO `conturi` (`id_cont`, `id_client`, `id_tip_cont`, `iban`, `sold`, `data_deschidere`, `status`, `moneda`) VALUES
-(1, 1, 1, 'RO12BTRL0000111122223333', 530.00, '2026-04-29', 'Activ', 'RON'),
-(2, 2, 1, 'RO44INGB0000555566667777', 2330.00, '2026-04-29', 'Activ', 'RON'),
+(1, 1, 1, 'RO12BTRL0000111122223333', 1040.00, '2026-04-29', 'Activ', 'RON'),
+(2, 2, 1, 'RO44INGB0000555566667777', 1820.00, '2026-04-29', 'Activ', 'RON'),
 (3, 3, 1, 'RO30BTRL0000333344445555', 5020.00, '2026-05-09', 'Activ', 'RON'),
 (4, 4, 1, 'RO40BTRL0000444455556666', 1210.50, '2026-05-09', 'Activ', 'RON'),
 (5, 5, 1, 'RO50BTRL0000555566667777', 340.00, '2026-05-09', 'Activ', 'RON'),
@@ -401,7 +406,12 @@ INSERT INTO `notificari` (`id_notificare`, `id_client`, `titlu`, `mesaj`, `statu
 (4, 2, 'Bani primiti', 'Ai primit 100.00 RON. Detalii: Ma falimentezi, femeie', 0, '2026-05-14 20:26:38'),
 (5, 2, 'Bani primiti', 'Ai primit 100.00 RON. Detalii: 123', 0, '2026-05-14 22:55:50'),
 (6, 3, 'Bani primiti', 'Ai primit 10.00 RON. Detalii: Fara Motiv. Enjoy', 0, '2026-05-15 07:29:43'),
-(7, 15, 'Bani primiti', 'Ai primit 10.00 RON. Detalii: Taxa de Protectie', 0, '2026-05-15 07:30:01');
+(7, 15, 'Bani primiti', 'Ai primit 10.00 RON. Detalii: Taxa de Protectie', 0, '2026-05-15 07:30:01'),
+(8, 1, 'Bani primiti', 'Ai primit 500.00 RON. Detalii: Na ma, datoria inapoi', 1, '2026-05-16 00:29:20'),
+(9, 1, 'Bani primiti', 'Ai primit 10.00 RON. Detalii: Si pentru paine', 1, '2026-05-16 00:29:42'),
+(10, 1, 'Bani primi?i', 'Ai primit 150.00 RON de la Popescu Ana. Detalii: Rest de plata', 1, '2026-05-16 00:30:31'),
+(11, 1, 'Bani primi?i', 'Ai primit 50.00 RON de la Ionescu Maria. Detalii: Cafea', 1, '2026-05-16 00:30:31'),
+(12, 1, 'Securitate', 'O noua conectare detectata din browserul tau.', 1, '2026-05-16 00:30:31');
 
 -- --------------------------------------------------------
 
@@ -452,17 +462,35 @@ INSERT INTO `transferuri` (`id_transfer`, `id_cont_sursa`, `id_cont_destinatie`,
 (6, 1, 2, 100.00, 'Ma falimentezi, femeie', '2026-05-14 20:26:38'),
 (7, 1, 2, 100.00, '123', '2026-05-14 22:55:50'),
 (8, 1, 3, 10.00, 'Fara Motiv. Enjoy', '2026-05-15 07:29:43'),
-(9, 1, 11, 10.00, 'Taxa de Protectie', '2026-05-15 07:30:01');
+(9, 1, 11, 10.00, 'Taxa de Protectie', '2026-05-15 07:30:01'),
+(10, 2, 1, 500.00, 'Na ma, datoria inapoi', '2026-05-16 00:29:20'),
+(11, 2, 1, 10.00, 'Si pentru paine', '2026-05-16 00:29:42');
 
 --
 -- Triggers `transferuri`
 --
 DELIMITER $$
 CREATE TRIGGER `trg_notificare_transfer` AFTER INSERT ON `transferuri` FOR EACH ROW BEGIN
+    DECLARE v_id_client_dest INT;
+    DECLARE v_nume_expeditor VARCHAR(100);
+
     
-    INSERT INTO notificari (id_client, titlu, mesaj)
-    SELECT id_client, 'Bani primiti', CONCAT('Ai primit ', NEW.suma, ' RON. Detalii: ', NEW.mesaj_detaliu)
-    FROM conturi WHERE id_cont = NEW.id_cont_destinatie;
+    SELECT id_client INTO v_id_client_dest FROM conturi WHERE id_cont = NEW.id_cont_destinatie;
+
+    
+    SELECT cli.nume INTO v_nume_expeditor 
+    FROM conturi co
+    JOIN clienti cli ON co.id_client = cli.id_client
+    WHERE co.id_cont = NEW.id_cont_sursa;
+
+    
+    INSERT INTO notificari (id_client, titlu, mesaj, status_citit)
+    VALUES (
+        v_id_client_dest, 
+        'Bani primiti', 
+        CONCAT(v_nume_expeditor, ' ti-a transferat ', NEW.suma, ' RON. Detalii: ', NEW.mesaj_detaliu), 
+        0
+    );
 END
 $$
 DELIMITER ;
@@ -501,17 +529,38 @@ INSERT INTO `tranzactii` (`id_tranzactie`, `id_cont`, `tip_tranzactie`, `suma`, 
 (11, 1, 'Iesire', 10.00, 'RO30BTRL0000333344445555', 'Fara Motiv. Enjoy', '2026-05-15 07:29:43'),
 (12, 3, 'Intrare', 10.00, 'RO12BTRL0000111122223333', 'Fara Motiv. Enjoy', '2026-05-15 07:29:43'),
 (13, 1, 'Iesire', 10.00, 'RO50BTRL0000555500005555', 'Taxa de Protectie', '2026-05-15 07:30:01'),
-(14, 11, 'Intrare', 10.00, 'RO12BTRL0000111122223333', 'Taxa de Protectie', '2026-05-15 07:30:01');
+(14, 11, 'Intrare', 10.00, 'RO12BTRL0000111122223333', 'Taxa de Protectie', '2026-05-15 07:30:01'),
+(15, 2, 'Iesire', 500.00, 'RO12BTRL0000111122223333', 'Na ma, datoria inapoi', '2026-05-16 00:29:20'),
+(16, 1, 'Intrare', 500.00, 'RO44INGB0000555566667777', 'Na ma, datoria inapoi', '2026-05-16 00:29:20'),
+(17, 2, 'Iesire', 10.00, 'RO12BTRL0000111122223333', 'Si pentru paine', '2026-05-16 00:29:42'),
+(18, 1, 'Intrare', 10.00, 'RO44INGB0000555566667777', 'Si pentru paine', '2026-05-16 00:29:42');
 
 --
 -- Triggers `tranzactii`
 --
 DELIMITER $$
 CREATE TRIGGER `dupa_insert_tranzactie` AFTER INSERT ON `tranzactii` FOR EACH ROW BEGIN
+    DECLARE v_id_client INT;
+
+    
     IF NEW.tip_tranzactie = 'Intrare' THEN
         UPDATE Conturi SET sold = sold + NEW.suma WHERE id_cont = NEW.id_cont;
     ELSEIF NEW.tip_tranzactie = 'Iesire' THEN
         UPDATE Conturi SET sold = sold - NEW.suma WHERE id_cont = NEW.id_cont;
+    END IF;
+
+    
+    
+    IF NEW.tip_tranzactie = 'Iesire' AND NEW.iban_partener IS NULL THEN
+        SELECT id_client INTO v_id_client FROM conturi WHERE id_cont = NEW.id_cont;
+        
+        INSERT INTO notificari (id_client, titlu, mesaj, status_citit)
+        VALUES (
+            v_id_client,
+            'Tranzactie noua',
+            CONCAT('Ai cheltuit suma de ', NEW.suma, ' RON. Detalii: ', COALESCE(NEW.motiv_plata, 'Nespecificat')),
+            0
+        );
     END IF;
 END
 $$
@@ -716,13 +765,13 @@ ALTER TABLE `tranzactii`
 -- AUTO_INCREMENT for table `audit_solduri`
 --
 ALTER TABLE `audit_solduri`
-  MODIFY `id_audit` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
+  MODIFY `id_audit` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=54;
 
 --
 -- AUTO_INCREMENT for table `beneficiari`
 --
 ALTER TABLE `beneficiari`
-  MODIFY `id_beneficiar` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id_beneficiar` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT for table `clienti`
@@ -746,7 +795,7 @@ ALTER TABLE `extrasecont`
 -- AUTO_INCREMENT for table `notificari`
 --
 ALTER TABLE `notificari`
-  MODIFY `id_notificare` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id_notificare` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `tipuricont`
@@ -758,13 +807,13 @@ ALTER TABLE `tipuricont`
 -- AUTO_INCREMENT for table `transferuri`
 --
 ALTER TABLE `transferuri`
-  MODIFY `id_transfer` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id_transfer` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `tranzactii`
 --
 ALTER TABLE `tranzactii`
-  MODIFY `id_tranzactie` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `id_tranzactie` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- Constraints for dumped tables
