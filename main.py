@@ -76,7 +76,7 @@ class AppBancara(ctk.CTk):
             text="ADMIN", 
             width=200, height=200, 
             font=("Roboto", 20),
-            command=lambda: Admin(self),
+            command=self.selectie_admin,
             **self.styles["card"]
         )
         self.btn_admin.pack(side="left", padx=20)
@@ -109,6 +109,39 @@ class AppBancara(ctk.CTk):
             User(self, id_gasit)
         else:
             messagebox.showerror("Eroare", "Acest email nu este înregistrat în sistemul nostru.")
+
+    def selectie_admin(self):
+        """Afișează ecranul de login pentru admin (Format IDENTIC cu cel de user)."""
+        self.curata_pagina()
+        
+        ctk.CTkLabel(self, text="LOGIN ADMINISTRATOR", font=("Roboto", 24, "bold"), text_color=self.theme["text_main"]).pack(pady=40)
+        
+        ctk.CTkLabel(self, text="Introdu adresa de email pentru acces:", text_color=self.theme["text_dim"]).pack(pady=5)
+        self.admin_email_entry = ctk.CTkEntry(self, width=300, placeholder_text="exemplu@admin.com", fg_color=self.theme["card_inner"], border_color=self.theme["btn_accent"], text_color=self.theme["text_main"])
+        self.admin_email_entry.pack(pady=10)
+
+        ctk.CTkButton(self, text="Acces Panou", fg_color=self.theme["btn_accent"], hover_color=self.theme["btn_hover"], command=self.verifica_login_admin).pack(pady=20)
+        
+        ctk.CTkButton(self, text="← Înapoi", fg_color="transparent", text_color=self.theme["text_dim"], hover_color=self.theme["btn_hover"], command=self.afiseaza_dashboard).pack(pady=10)
+
+    def verifica_login_admin(self):
+        """Logica de verificare (Format IDENTIC cu cel de user)."""
+        email_introdus = self.admin_email_entry.get().strip()
+        
+        if not email_introdus:
+            messagebox.showwarning("Atenție", "Te rugăm să introduci un email!")
+            return
+
+        self.db_config = self.all_configs['admin']
+        # Căutăm în noua tabelă creată
+        rezultat = self.ruleaza_query("SELECT id_admin FROM admini WHERE email = %s", (email_introdus,))
+
+        if rezultat:
+            id_gasit = rezultat[0][0]
+            # Trimitem id-ul adminului către clasă, exact ca la User
+            Admin(self, id_gasit)
+        else:
+            messagebox.showerror("Eroare", "Acest email de administrator nu există.")
 
     def ruleaza_query(self, sql, params=None, fetch=True):
         """Logica de conectare la baza de date."""

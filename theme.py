@@ -96,5 +96,15 @@ STYLES = {
         "text_color": THEME["text_main"],
         "hover_color": THEME["bg_panel"],
         "width": 150, "height": 30
+    },
+    "btn_options": {
+        "width": 200, 
+        "height": 100, 
+        "font": ("Roboto", 16, "bold"), 
+        "fg_color": THEME["bg_panel"],
+        "border_width": 2,
+        "border_color": THEME["btn_accent"],
+        "hover_color": THEME["btn_accent"],
+        "text_color": THEME["text_main"]
     }
 }
