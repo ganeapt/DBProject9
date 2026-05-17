@@ -27,6 +27,7 @@ class User:
 
         self.button_notificari = ctk.CTkButton(self.sidebar, text="Notificări", command=self.display_notifications, **self.app.styles["card"])
         self.button_notificari.pack(pady=5, padx=10, fill="x")
+        self.update_notification_badge()
 
         self.button_logout = ctk.CTkButton(self.sidebar, text="Log Out", fg_color=self.app.theme["danger"], hover_color=self.app.theme["danger_hover"], command=self.app.afiseaza_dashboard)
         self.button_logout.pack(side="bottom", pady=20, padx=10, fill="x")
@@ -588,6 +589,8 @@ class User:
         else:
             self.button_notificari.configure(text="Notificări")
 
+        self.app.after(5000, self.update_notification_badge)
+
     
     def display_notifications(self):
         self.curata_content()
@@ -618,7 +621,7 @@ class User:
         ctk.CTkButton(
             self.content, 
             text="← Înapoi",
-            command=self.afiseaza_situatie_conturi,
+            command=self.display_account_hub,
             **self.app.styles["btn_back"]
         ).pack(pady=10)
 

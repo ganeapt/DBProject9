@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3307
--- Generation Time: May 16, 2026 at 03:04 AM
+-- Generation Time: May 17, 2026 at 04:37 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -160,7 +160,15 @@ INSERT INTO `audit_solduri` (`id_audit`, `id_cont`, `sold_vechi`, `sold_nou`, `d
 (50, 2, 2330.00, 1830.00, '2026-05-16 00:29:20'),
 (51, 1, 530.00, 1030.00, '2026-05-16 00:29:20'),
 (52, 2, 1830.00, 1820.00, '2026-05-16 00:29:42'),
-(53, 1, 1030.00, 1040.00, '2026-05-16 00:29:42');
+(53, 1, 1030.00, 1040.00, '2026-05-16 00:29:42'),
+(54, 2, 1820.00, 1700.00, '2026-05-17 14:27:40'),
+(55, 1, 1040.00, 1160.00, '2026-05-17 14:27:40'),
+(56, 2, 1700.00, 1600.00, '2026-05-17 14:27:49'),
+(57, 1, 1160.00, 1260.00, '2026-05-17 14:27:49'),
+(58, 2, 1600.00, 1500.00, '2026-05-17 14:27:57'),
+(59, 1, 1260.00, 1360.00, '2026-05-17 14:27:57'),
+(60, 1, 1360.00, 1300.00, '2026-05-17 14:33:25'),
+(61, 2, 1500.00, 1560.00, '2026-05-17 14:33:25');
 
 -- --------------------------------------------------------
 
@@ -272,8 +280,8 @@ CREATE TABLE `conturi` (
 --
 
 INSERT INTO `conturi` (`id_cont`, `id_client`, `id_tip_cont`, `iban`, `sold`, `data_deschidere`, `status`, `moneda`) VALUES
-(1, 1, 1, 'RO12BTRL0000111122223333', 1040.00, '2026-04-29', 'Activ', 'RON'),
-(2, 2, 1, 'RO44INGB0000555566667777', 1820.00, '2026-04-29', 'Activ', 'RON'),
+(1, 1, 1, 'RO12BTRL0000111122223333', 1300.00, '2026-04-29', 'Activ', 'RON'),
+(2, 2, 1, 'RO44INGB0000555566667777', 1560.00, '2026-04-29', 'Activ', 'RON'),
 (3, 3, 1, 'RO30BTRL0000333344445555', 5020.00, '2026-05-09', 'Activ', 'RON'),
 (4, 4, 1, 'RO40BTRL0000444455556666', 1210.50, '2026-05-09', 'Activ', 'RON'),
 (5, 5, 1, 'RO50BTRL0000555566667777', 340.00, '2026-05-09', 'Activ', 'RON'),
@@ -400,18 +408,10 @@ CREATE TABLE `notificari` (
 --
 
 INSERT INTO `notificari` (`id_notificare`, `id_client`, `titlu`, `mesaj`, `status_citit`, `data_trimitere`) VALUES
-(1, 2, 'Bani primiti', 'Ai primit 10.00 RON. Detalii: Pentru paine', 0, '2026-05-14 00:06:33'),
-(2, 3, 'Bani primiti', 'Ai primit 10.00 RON. Detalii: Nu ii spune Anei', 0, '2026-05-14 00:06:47'),
-(3, 4, 'Bani primiti', 'Ai primit 10.00 RON. Detalii: Datoria de la pacanele', 0, '2026-05-14 00:07:01'),
-(4, 2, 'Bani primiti', 'Ai primit 100.00 RON. Detalii: Ma falimentezi, femeie', 0, '2026-05-14 20:26:38'),
-(5, 2, 'Bani primiti', 'Ai primit 100.00 RON. Detalii: 123', 0, '2026-05-14 22:55:50'),
-(6, 3, 'Bani primiti', 'Ai primit 10.00 RON. Detalii: Fara Motiv. Enjoy', 0, '2026-05-15 07:29:43'),
-(7, 15, 'Bani primiti', 'Ai primit 10.00 RON. Detalii: Taxa de Protectie', 0, '2026-05-15 07:30:01'),
-(8, 1, 'Bani primiti', 'Ai primit 500.00 RON. Detalii: Na ma, datoria inapoi', 1, '2026-05-16 00:29:20'),
-(9, 1, 'Bani primiti', 'Ai primit 10.00 RON. Detalii: Si pentru paine', 1, '2026-05-16 00:29:42'),
-(10, 1, 'Bani primi?i', 'Ai primit 150.00 RON de la Popescu Ana. Detalii: Rest de plata', 1, '2026-05-16 00:30:31'),
-(11, 1, 'Bani primi?i', 'Ai primit 50.00 RON de la Ionescu Maria. Detalii: Cafea', 1, '2026-05-16 00:30:31'),
-(12, 1, 'Securitate', 'O noua conectare detectata din browserul tau.', 1, '2026-05-16 00:30:31');
+(1, 1, 'Bani primiti', 'Popescu Ana ti-a transferat 120.00 RON. Detalii: Notificare', 1, '2026-05-17 14:27:40'),
+(2, 1, 'Bani primiti', 'Popescu Ana ti-a transferat 100.00 RON. Detalii: Notificare 2', 1, '2026-05-17 14:27:49'),
+(3, 1, 'Bani primiti', 'Popescu Ana ti-a transferat 100.00 RON. Detalii: Alta notificare', 1, '2026-05-17 14:27:57'),
+(4, 2, 'Transfer primit', 'Ionescu Ion ti-a transferat 60.00 RON. Detalii: Uno Reverse', 1, '2026-05-17 14:33:25');
 
 -- --------------------------------------------------------
 
@@ -464,7 +464,11 @@ INSERT INTO `transferuri` (`id_transfer`, `id_cont_sursa`, `id_cont_destinatie`,
 (8, 1, 3, 10.00, 'Fara Motiv. Enjoy', '2026-05-15 07:29:43'),
 (9, 1, 11, 10.00, 'Taxa de Protectie', '2026-05-15 07:30:01'),
 (10, 2, 1, 500.00, 'Na ma, datoria inapoi', '2026-05-16 00:29:20'),
-(11, 2, 1, 10.00, 'Si pentru paine', '2026-05-16 00:29:42');
+(11, 2, 1, 10.00, 'Si pentru paine', '2026-05-16 00:29:42'),
+(14, 2, 1, 120.00, 'Notificare', '2026-05-17 14:27:40'),
+(15, 2, 1, 100.00, 'Notificare 2', '2026-05-17 14:27:49'),
+(16, 2, 1, 100.00, 'Alta notificare', '2026-05-17 14:27:57'),
+(17, 1, 2, 60.00, 'Uno Reverse', '2026-05-17 14:33:25');
 
 --
 -- Triggers `transferuri`
@@ -472,22 +476,24 @@ INSERT INTO `transferuri` (`id_transfer`, `id_cont_sursa`, `id_cont_destinatie`,
 DELIMITER $$
 CREATE TRIGGER `trg_notificare_transfer` AFTER INSERT ON `transferuri` FOR EACH ROW BEGIN
     DECLARE v_id_client_dest INT;
-    DECLARE v_nume_expeditor VARCHAR(100);
+    DECLARE v_nume_expeditor VARCHAR(150);
 
     
     SELECT id_client INTO v_id_client_dest FROM conturi WHERE id_cont = NEW.id_cont_destinatie;
 
     
-    SELECT cli.nume INTO v_nume_expeditor 
+    SELECT COALESCE(CONCAT(pf.nume, ' ', pf.prenume), pj.denumire_firma) INTO v_nume_expeditor 
     FROM conturi co
     JOIN clienti cli ON co.id_client = cli.id_client
+    LEFT JOIN detalii_pf pf ON cli.id_client = pf.id_client
+    LEFT JOIN detalii_pj pj ON cli.id_client = pj.id_client
     WHERE co.id_cont = NEW.id_cont_sursa;
 
     
     INSERT INTO notificari (id_client, titlu, mesaj, status_citit)
     VALUES (
         v_id_client_dest, 
-        'Bani primiti', 
+        'Transfer primit', 
         CONCAT(v_nume_expeditor, ' ti-a transferat ', NEW.suma, ' RON. Detalii: ', NEW.mesaj_detaliu), 
         0
     );
@@ -533,7 +539,15 @@ INSERT INTO `tranzactii` (`id_tranzactie`, `id_cont`, `tip_tranzactie`, `suma`, 
 (15, 2, 'Iesire', 500.00, 'RO12BTRL0000111122223333', 'Na ma, datoria inapoi', '2026-05-16 00:29:20'),
 (16, 1, 'Intrare', 500.00, 'RO44INGB0000555566667777', 'Na ma, datoria inapoi', '2026-05-16 00:29:20'),
 (17, 2, 'Iesire', 10.00, 'RO12BTRL0000111122223333', 'Si pentru paine', '2026-05-16 00:29:42'),
-(18, 1, 'Intrare', 10.00, 'RO44INGB0000555566667777', 'Si pentru paine', '2026-05-16 00:29:42');
+(18, 1, 'Intrare', 10.00, 'RO44INGB0000555566667777', 'Si pentru paine', '2026-05-16 00:29:42'),
+(19, 2, 'Iesire', 120.00, 'RO12BTRL0000111122223333', 'Notificare', '2026-05-17 14:27:40'),
+(20, 1, 'Intrare', 120.00, 'RO44INGB0000555566667777', 'Notificare', '2026-05-17 14:27:40'),
+(21, 2, 'Iesire', 100.00, 'RO12BTRL0000111122223333', 'Notificare 2', '2026-05-17 14:27:49'),
+(22, 1, 'Intrare', 100.00, 'RO44INGB0000555566667777', 'Notificare 2', '2026-05-17 14:27:49'),
+(23, 2, 'Iesire', 100.00, 'RO12BTRL0000111122223333', 'Alta notificare', '2026-05-17 14:27:57'),
+(24, 1, 'Intrare', 100.00, 'RO44INGB0000555566667777', 'Alta notificare', '2026-05-17 14:27:57'),
+(25, 1, 'Iesire', 60.00, 'RO44INGB0000555566667777', 'Uno Reverse', '2026-05-17 14:33:25'),
+(26, 2, 'Intrare', 60.00, 'RO12BTRL0000111122223333', 'Uno Reverse', '2026-05-17 14:33:25');
 
 --
 -- Triggers `tranzactii`
@@ -765,7 +779,7 @@ ALTER TABLE `tranzactii`
 -- AUTO_INCREMENT for table `audit_solduri`
 --
 ALTER TABLE `audit_solduri`
-  MODIFY `id_audit` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=54;
+  MODIFY `id_audit` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=62;
 
 --
 -- AUTO_INCREMENT for table `beneficiari`
@@ -795,7 +809,7 @@ ALTER TABLE `extrasecont`
 -- AUTO_INCREMENT for table `notificari`
 --
 ALTER TABLE `notificari`
-  MODIFY `id_notificare` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id_notificare` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `tipuricont`
@@ -807,13 +821,13 @@ ALTER TABLE `tipuricont`
 -- AUTO_INCREMENT for table `transferuri`
 --
 ALTER TABLE `transferuri`
-  MODIFY `id_transfer` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id_transfer` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `tranzactii`
 --
 ALTER TABLE `tranzactii`
-  MODIFY `id_tranzactie` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id_tranzactie` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- Constraints for dumped tables
