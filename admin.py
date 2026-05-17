@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from tkinter import ttk
 
 class Admin:
     def __init__(self, app, admin_id):
@@ -10,7 +11,8 @@ class Admin:
         self.content = ctk.CTkFrame(self.app, fg_color="transparent")
         self.content.pack(expand=True, fill="both", padx=20, pady=20)
 
-        # Încărcăm direct Dashboard-ul identic ca stil cu cel de User
+        self.is_viewing_audit = False
+
         self.afiseaza_dashboard()
 
     def curata_content(self):
@@ -40,7 +42,6 @@ class Admin:
         btn_frauda = ctk.CTkButton(grid_frame, text="Tranzacții Suspecte", command=self.afiseaza_frauda, **self.app.styles["btn_options"])
         btn_frauda.grid(row=1, column=1, padx=15, pady=15)
 
-        # Butonul de Log Out poziționat în colțul de jos-stânga al frame-ului principal
         self.btn_logout = ctk.CTkButton(
             self.content, 
             text="Log Out", 
@@ -49,10 +50,6 @@ class Admin:
             command=self.app.afiseaza_dashboard
         )
         
-        # --- Aici e modificarea ---
-        # Folosim side="bottom" pentru a-l împinge jos de tot
-        # Folosim anchor="sw" pentru a-l alinia în stânga
-        # Folosim padx=20 pentru a-l decala de la marginea ferestrei
         self.btn_logout.pack(side="bottom", anchor="sw", padx=20, pady=(20, 10))
 
 
@@ -66,9 +63,101 @@ class Admin:
         ).pack(pady=30)
 
     def afiseaza_audit(self):
+        """Inițializează pagina de audit în format tabelar."""
         self.curata_content()
+        self.is_viewing_audit = True 
+
         self.app.add_label(self.content, "AUDIT TRAIL: MODIFICĂRI SOLDURI", type="h1", pady=(10, 20))
-        self._add_back_button()
+
+        frame_date = ctk.CTkFrame(self.content, fg_color="transparent")
+        frame_date.pack(padx=20, pady=10, fill="both", expand=True)
+
+        stil = ttk.Style()
+        stil.theme_use("clam")
+        
+        stil.configure("Treeview", 
+                       background=self.app.theme["bg_panel"], 
+                       fieldbackground=self.app.theme["bg_panel"], 
+                       foreground=self.app.theme["text_main"],
+                       font=("Roboto", 14), 
+                       rowheight=35)        
+                       
+        stil.configure("Treeview.Heading", 
+                       background=self.app.theme["card_inner"], 
+                       foreground=self.app.theme["text_main"], 
+                       font=("Roboto", 14, "bold"), 
+                       borderwidth=0)
+
+        coloane = ("ID Audit", "ID Cont", "Nume Client", "Sold Vechi", "Sold Nou")
+        self.tabel = ttk.Treeview(frame_date, columns=coloane, show="headings")
+        
+        latimi_coloane = {
+            "ID Audit": 120, 
+            "ID Cont": 120, 
+            "Nume Client": 280, 
+            "Sold Vechi": 140, 
+            "Sold Nou": 140
+        }
+        
+        for col in coloane:
+            self.tabel.heading(col, text=col)
+            self.tabel.column(col, width=latimi_coloane[col], anchor="center")
+            
+        self.tabel.pack(side="left", fill="both", expand=True)
+
+        scrollbar = ctk.CTkScrollbar(
+            frame_date, 
+            orientation="vertical", 
+            command=self.tabel.yview,
+            button_color=self.app.theme["btn_accent"],       
+            button_hover_color=self.app.theme["btn_hover"]   
+        )
+        scrollbar.pack(side="right", fill="y")
+        self.tabel.configure(yscrollcommand=scrollbar.set)
+
+        ctk.CTkButton(
+            self.content, 
+            text="← Înapoi la Dashboard", 
+            command=self.paraseste_audit,
+            **self.app.styles["btn_back"]
+        ).pack(side="bottom", anchor="sw", padx=20, pady=(10, 20))
+
+        self.incarca_date_audit()
+
+    def incarca_date_audit(self):
+        """Curăță și inserează rândurile în Treeview direct din DB folosind un query cu JOIN-uri."""
+        if not self.is_viewing_audit:
+            return
+
+        for item in self.tabel.get_children():
+            self.tabel.delete(item)
+
+        sql = """
+            SELECT 
+                a.id_audit, 
+                a.id_cont, 
+                COALESCE(CONCAT(pf.nume, ' ', pf.prenume), pj.denumire_firma, cl.email) AS nume_complet,
+                a.sold_vechi, 
+                a.sold_nou 
+            FROM audit_solduri a
+            JOIN conturi c ON a.id_cont = c.id_cont
+            JOIN clienti cl ON c.id_client = cl.id_client
+            LEFT JOIN detalii_pf pf ON cl.id_client = pf.id_client
+            LEFT JOIN detalii_pj pj ON cl.id_client = pj.id_client
+            ORDER BY a.id_audit DESC
+        """
+        
+        rezultat = self.app.ruleaza_query(sql)
+        if rezultat:
+            for row in rezultat:
+                self.tabel.insert("", "end", values=row)
+
+        self.app.after(3000, self.incarca_date_audit)
+
+    def paraseste_audit(self):
+        """Oprește complet loop-ul de query-uri și revine în dashboard."""
+        self.is_viewing_audit = False
+        self.afiseaza_dashboard()
 
     def afiseaza_gestiune(self):
         self.curata_content()
