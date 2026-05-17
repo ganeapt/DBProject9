@@ -618,10 +618,13 @@ class User:
                 self._add_row_label(txt_col, titlu.upper(), "lbl_primary")
                 self._add_row_label(txt_col, mesaj, "lbl_secondary")
 
+        cont_client = self.app.ruleaza_query("SELECT iban FROM conturi WHERE id_client = %s LIMIT 1", (self.client_id,))
+        iban_curent = cont_client[0][0] if cont_client else ""
+
         ctk.CTkButton(
             self.content, 
             text="← Înapoi",
-            command=self.display_account_hub,
+            command=lambda: self.display_account_hub(iban_curent),
             **self.app.styles["btn_back"]
         ).pack(pady=10)
 

@@ -218,9 +218,60 @@ class Admin:
         self.afiseaza_dashboard()
 
     def afiseaza_alerte(self):
+        """Afișează formularul de trimitere alertă/notificare către un client."""
         self.curata_content()
-        self.app.add_label(self.content, "TRIMITE NOTIFICARE DIRECTĂ", type="h1", pady=(10, 20))
-        self._add_back_button()
+        self.app.add_label(self.content, "TRIMITE ALERTĂ CLIENT", type="h2", pady=10)
+
+        form_frame = ctk.CTkFrame(self.content, fg_color="transparent")
+        form_frame.pack(expand=True)
+
+        self.app.add_label(form_frame, "ID Client:", type="form")
+        id_client_entry = ctk.CTkEntry(form_frame, width=300, placeholder_text="Ex: 1", **self.app.styles["input"])
+        id_client_entry.pack(pady=(0, 15))
+
+        self.app.add_label(form_frame, "Titlu Alertă:", type="form")
+        titlu_entry = ctk.CTkEntry(form_frame, width=300, placeholder_text="Ex: Mentenanță", **self.app.styles["input"])
+        titlu_entry.pack(pady=(0, 15))
+
+        self.app.add_label(form_frame, "Mesaj Alertă:", type="form")
+        mesaj_entry = ctk.CTkEntry(form_frame, width=300, placeholder_text="Introduceți textul notificării...", **self.app.styles["input"])
+        mesaj_entry.pack(pady=(0, 25))
+
+        btn_send = ctk.CTkButton(
+            form_frame, text="TRIMITE ALERTĂ", 
+            width=200, height=35,
+            command=lambda: self.trimite_alerta_db(id_client_entry.get(), titlu_entry.get(), mesaj_entry.get()),
+            **self.app.styles["btn_confirm"]
+        )
+        btn_send.pack(pady=10)
+
+        ctk.CTkButton(form_frame, text="Anulează", command=self.afiseaza_dashboard, **self.app.styles["btn_back"]).pack()
+
+
+    def trimite_alerta_db(self, id_client, titlu, mesaj):
+        """Validează existența clientului și inserează notificarea în baza de date."""
+        if not id_client.strip() or not titlu.strip() or not mesaj.strip():
+            messagebox.showwarning("Atenție", "Toate cele 3 câmpuri sunt obligatorii!")
+            return
+
+        client_existent = self.app.ruleaza_query("SELECT id_client FROM clienti WHERE id_client = %s", (id_client.strip(),))
+        
+        if not client_existent:
+            messagebox.showerror("Eroare", f"Clientul cu ID-ul {id_client} nu există în baza de date!")
+            return
+
+        try:
+            self.app.ruleaza_query(
+                "INSERT INTO notificari (id_client, titlu, mesaj) VALUES (%s, %s, %s)",
+                (id_client.strip(), titlu.strip(), mesaj.strip()),
+                fetch=False
+            )
+            messagebox.showinfo("Succes", f"Alerta a fost trimisă cu succes clientului {id_client}!")
+            
+            self.afiseaza_dashboard()
+            
+        except Exception as e:
+            messagebox.showerror("Eroare", f"Eroare la scrierea notificării în DB: {str(e)}")
 
     def afiseaza_frauda(self):
         self.curata_content()
