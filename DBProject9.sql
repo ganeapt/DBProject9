@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3307
--- Generation Time: May 17, 2026 at 04:37 PM
+-- Generation Time: May 18, 2026 at 01:35 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -92,6 +92,24 @@ DELIMITER ;
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `admini`
+--
+
+CREATE TABLE `admini` (
+  `id_admin` int(11) NOT NULL,
+  `email` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `admini`
+--
+
+INSERT INTO `admini` (`id_admin`, `email`) VALUES
+(1, 'admin@email.com');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `audit_solduri`
 --
 
@@ -168,7 +186,29 @@ INSERT INTO `audit_solduri` (`id_audit`, `id_cont`, `sold_vechi`, `sold_nou`, `d
 (58, 2, 1600.00, 1500.00, '2026-05-17 14:27:57'),
 (59, 1, 1260.00, 1360.00, '2026-05-17 14:27:57'),
 (60, 1, 1360.00, 1300.00, '2026-05-17 14:33:25'),
-(61, 2, 1500.00, 1560.00, '2026-05-17 14:33:25');
+(61, 2, 1500.00, 1560.00, '2026-05-17 14:33:25'),
+(62, 1, 1300.00, 1290.00, '2026-05-17 23:28:18'),
+(63, 2, 1560.00, 1570.00, '2026-05-17 23:28:18'),
+(64, 1, 1290.00, 1280.00, '2026-05-17 23:28:23'),
+(65, 2, 1570.00, 1580.00, '2026-05-17 23:28:23'),
+(66, 1, 1280.00, 1270.00, '2026-05-17 23:28:28'),
+(67, 2, 1580.00, 1590.00, '2026-05-17 23:28:28'),
+(68, 1, 1270.00, 1260.00, '2026-05-17 23:28:34'),
+(69, 2, 1590.00, 1600.00, '2026-05-17 23:28:34'),
+(70, 1, 1260.00, 1250.00, '2026-05-17 23:28:48'),
+(71, 2, 1600.00, 1610.00, '2026-05-17 23:28:48'),
+(72, 1, 1250.00, 1244.00, '2026-05-17 23:28:56'),
+(73, 2, 1610.00, 1616.00, '2026-05-17 23:28:56'),
+(74, 1, 1244.00, 1234.00, '2026-05-17 23:29:05'),
+(75, 2, 1616.00, 1626.00, '2026-05-17 23:29:05'),
+(76, 1, 1234.00, 1229.00, '2026-05-17 23:29:13'),
+(77, 2, 1626.00, 1631.00, '2026-05-17 23:29:13'),
+(78, 1, 1229.00, 1219.00, '2026-05-17 23:29:22'),
+(79, 2, 1631.00, 1641.00, '2026-05-17 23:29:22'),
+(80, 1, 1219.00, 1210.00, '2026-05-17 23:29:28'),
+(81, 2, 1641.00, 1650.00, '2026-05-17 23:29:28'),
+(82, 1, 1210.00, 1200.00, '2026-05-17 23:29:33'),
+(83, 2, 1650.00, 1660.00, '2026-05-17 23:29:33');
 
 -- --------------------------------------------------------
 
@@ -280,8 +320,8 @@ CREATE TABLE `conturi` (
 --
 
 INSERT INTO `conturi` (`id_cont`, `id_client`, `id_tip_cont`, `iban`, `sold`, `data_deschidere`, `status`, `moneda`) VALUES
-(1, 1, 1, 'RO12BTRL0000111122223333', 1300.00, '2026-04-29', 'Activ', 'RON'),
-(2, 2, 1, 'RO44INGB0000555566667777', 1560.00, '2026-04-29', 'Activ', 'RON'),
+(1, 1, 1, 'RO12BTRL0000111122223333', 1200.00, '2026-04-29', 'Activ', 'RON'),
+(2, 2, 1, 'RO44INGB0000555566667777', 1660.00, '2026-04-29', 'Activ', 'RON'),
 (3, 3, 1, 'RO30BTRL0000333344445555', 5020.00, '2026-05-09', 'Activ', 'RON'),
 (4, 4, 1, 'RO40BTRL0000444455556666', 1210.50, '2026-05-09', 'Activ', 'RON'),
 (5, 5, 1, 'RO50BTRL0000555566667777', 340.00, '2026-05-09', 'Activ', 'RON'),
@@ -411,7 +451,20 @@ INSERT INTO `notificari` (`id_notificare`, `id_client`, `titlu`, `mesaj`, `statu
 (1, 1, 'Bani primiti', 'Popescu Ana ti-a transferat 120.00 RON. Detalii: Notificare', 1, '2026-05-17 14:27:40'),
 (2, 1, 'Bani primiti', 'Popescu Ana ti-a transferat 100.00 RON. Detalii: Notificare 2', 1, '2026-05-17 14:27:49'),
 (3, 1, 'Bani primiti', 'Popescu Ana ti-a transferat 100.00 RON. Detalii: Alta notificare', 1, '2026-05-17 14:27:57'),
-(4, 2, 'Transfer primit', 'Ionescu Ion ti-a transferat 60.00 RON. Detalii: Uno Reverse', 1, '2026-05-17 14:33:25');
+(4, 2, 'Transfer primit', 'Ionescu Ion ti-a transferat 60.00 RON. Detalii: Uno Reverse', 1, '2026-05-17 14:33:25'),
+(5, 1, 'Termenii si Conditiile', 'Daca ii mai trimiti atatia bani Anei, o sa ii spunem sotiei de amanta ta.', 1, '2026-05-17 23:00:07'),
+(6, 1, 'Last Warning...', 'Ne umplii baza de date!! Calmeaza-te!', 1, '2026-05-17 23:08:32'),
+(7, 2, 'Transfer primit', 'Ionescu Ion ti-a transferat 10.00 RON. Detalii: 1', 0, '2026-05-17 23:28:18'),
+(8, 2, 'Transfer primit', 'Ionescu Ion ti-a transferat 10.00 RON. Detalii: 2', 0, '2026-05-17 23:28:23'),
+(9, 2, 'Transfer primit', 'Ionescu Ion ti-a transferat 10.00 RON. Detalii: 3', 0, '2026-05-17 23:28:28'),
+(10, 2, 'Transfer primit', 'Ionescu Ion ti-a transferat 10.00 RON. Detalii: 4', 0, '2026-05-17 23:28:34'),
+(11, 2, 'Transfer primit', 'Ionescu Ion ti-a transferat 10.00 RON. Detalii: 5', 0, '2026-05-17 23:28:48'),
+(12, 2, 'Transfer primit', 'Ionescu Ion ti-a transferat 6.00 RON. Detalii: 10', 0, '2026-05-17 23:28:56'),
+(13, 2, 'Transfer primit', 'Ionescu Ion ti-a transferat 10.00 RON. Detalii: 7', 0, '2026-05-17 23:29:05'),
+(14, 2, 'Transfer primit', 'Ionescu Ion ti-a transferat 5.00 RON. Detalii: 10', 0, '2026-05-17 23:29:13'),
+(15, 2, 'Transfer primit', 'Ionescu Ion ti-a transferat 10.00 RON. Detalii: 9', 0, '2026-05-17 23:29:22'),
+(16, 2, 'Transfer primit', 'Ionescu Ion ti-a transferat 9.00 RON. Detalii: 10', 0, '2026-05-17 23:29:28'),
+(17, 2, 'Transfer primit', 'Ionescu Ion ti-a transferat 10.00 RON. Detalii: 10', 0, '2026-05-17 23:29:33');
 
 -- --------------------------------------------------------
 
@@ -468,7 +521,18 @@ INSERT INTO `transferuri` (`id_transfer`, `id_cont_sursa`, `id_cont_destinatie`,
 (14, 2, 1, 120.00, 'Notificare', '2026-05-17 14:27:40'),
 (15, 2, 1, 100.00, 'Notificare 2', '2026-05-17 14:27:49'),
 (16, 2, 1, 100.00, 'Alta notificare', '2026-05-17 14:27:57'),
-(17, 1, 2, 60.00, 'Uno Reverse', '2026-05-17 14:33:25');
+(17, 1, 2, 60.00, 'Uno Reverse', '2026-05-17 14:33:25'),
+(18, 1, 2, 10.00, '1', '2026-05-17 23:28:18'),
+(19, 1, 2, 10.00, '2', '2026-05-17 23:28:23'),
+(20, 1, 2, 10.00, '3', '2026-05-17 23:28:28'),
+(21, 1, 2, 10.00, '4', '2026-05-17 23:28:34'),
+(22, 1, 2, 10.00, '5', '2026-05-17 23:28:48'),
+(23, 1, 2, 6.00, '10', '2026-05-17 23:28:56'),
+(24, 1, 2, 10.00, '7', '2026-05-17 23:29:05'),
+(25, 1, 2, 5.00, '10', '2026-05-17 23:29:13'),
+(26, 1, 2, 10.00, '9', '2026-05-17 23:29:22'),
+(27, 1, 2, 9.00, '10', '2026-05-17 23:29:28'),
+(28, 1, 2, 10.00, '10', '2026-05-17 23:29:33');
 
 --
 -- Triggers `transferuri`
@@ -547,7 +611,29 @@ INSERT INTO `tranzactii` (`id_tranzactie`, `id_cont`, `tip_tranzactie`, `suma`, 
 (23, 2, 'Iesire', 100.00, 'RO12BTRL0000111122223333', 'Alta notificare', '2026-05-17 14:27:57'),
 (24, 1, 'Intrare', 100.00, 'RO44INGB0000555566667777', 'Alta notificare', '2026-05-17 14:27:57'),
 (25, 1, 'Iesire', 60.00, 'RO44INGB0000555566667777', 'Uno Reverse', '2026-05-17 14:33:25'),
-(26, 2, 'Intrare', 60.00, 'RO12BTRL0000111122223333', 'Uno Reverse', '2026-05-17 14:33:25');
+(26, 2, 'Intrare', 60.00, 'RO12BTRL0000111122223333', 'Uno Reverse', '2026-05-17 14:33:25'),
+(27, 1, 'Iesire', 10.00, 'RO44INGB0000555566667777', '1', '2026-05-17 23:28:18'),
+(28, 2, 'Intrare', 10.00, 'RO12BTRL0000111122223333', '1', '2026-05-17 23:28:18'),
+(29, 1, 'Iesire', 10.00, 'RO44INGB0000555566667777', '2', '2026-05-17 23:28:23'),
+(30, 2, 'Intrare', 10.00, 'RO12BTRL0000111122223333', '2', '2026-05-17 23:28:23'),
+(31, 1, 'Iesire', 10.00, 'RO44INGB0000555566667777', '3', '2026-05-17 23:28:28'),
+(32, 2, 'Intrare', 10.00, 'RO12BTRL0000111122223333', '3', '2026-05-17 23:28:28'),
+(33, 1, 'Iesire', 10.00, 'RO44INGB0000555566667777', '4', '2026-05-17 23:28:34'),
+(34, 2, 'Intrare', 10.00, 'RO12BTRL0000111122223333', '4', '2026-05-17 23:28:34'),
+(35, 1, 'Iesire', 10.00, 'RO44INGB0000555566667777', '5', '2026-05-17 23:28:48'),
+(36, 2, 'Intrare', 10.00, 'RO12BTRL0000111122223333', '5', '2026-05-17 23:28:48'),
+(37, 1, 'Iesire', 6.00, 'RO44INGB0000555566667777', '10', '2026-05-17 23:28:56'),
+(38, 2, 'Intrare', 6.00, 'RO12BTRL0000111122223333', '10', '2026-05-17 23:28:56'),
+(39, 1, 'Iesire', 10.00, 'RO44INGB0000555566667777', '7', '2026-05-17 23:29:05'),
+(40, 2, 'Intrare', 10.00, 'RO12BTRL0000111122223333', '7', '2026-05-17 23:29:05'),
+(41, 1, 'Iesire', 5.00, 'RO44INGB0000555566667777', '10', '2026-05-17 23:29:13'),
+(42, 2, 'Intrare', 5.00, 'RO12BTRL0000111122223333', '10', '2026-05-17 23:29:13'),
+(43, 1, 'Iesire', 10.00, 'RO44INGB0000555566667777', '9', '2026-05-17 23:29:22'),
+(44, 2, 'Intrare', 10.00, 'RO12BTRL0000111122223333', '9', '2026-05-17 23:29:22'),
+(45, 1, 'Iesire', 9.00, 'RO44INGB0000555566667777', '10', '2026-05-17 23:29:28'),
+(46, 2, 'Intrare', 9.00, 'RO12BTRL0000111122223333', '10', '2026-05-17 23:29:28'),
+(47, 1, 'Iesire', 10.00, 'RO44INGB0000555566667777', '10', '2026-05-17 23:29:33'),
+(48, 2, 'Intrare', 10.00, 'RO12BTRL0000111122223333', '10', '2026-05-17 23:29:33');
 
 --
 -- Triggers `tranzactii`
@@ -645,6 +731,19 @@ CREATE TABLE `v_istoric_tranzactii` (
 -- --------------------------------------------------------
 
 --
+-- Stand-in structure for view `v_tranzactii_suspecte`
+-- (See below for the actual view)
+--
+CREATE TABLE `v_tranzactii_suspecte` (
+`id_tranzactie` int(11)
+,`id_cont` int(11)
+,`suma` decimal(15,2)
+,`data_tranzactie` timestamp
+);
+
+-- --------------------------------------------------------
+
+--
 -- Structure for view `v_alerte_frauda`
 --
 DROP TABLE IF EXISTS `v_alerte_frauda`;
@@ -678,9 +777,25 @@ DROP TABLE IF EXISTS `v_istoric_tranzactii`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_istoric_tranzactii`  AS SELECT `t`.`id_tranzactie` AS `id_tranzactie`, `t`.`id_cont` AS `id_cont`, `c`.`iban` AS `iban_cont`, `t`.`tip_tranzactie` AS `tip_tranzactie`, `t`.`suma` AS `suma`, `t`.`iban_partener` AS `iban_partener`, `t`.`motiv_plata` AS `motiv_plata`, `t`.`data_tranzactie` AS `data_tranzactie`, CASE WHEN `t`.`tip_tranzactie` = 'Iesire' THEN coalesce((select `b`.`nume_beneficiar` from `beneficiari` `b` where `b`.`iban_beneficiar` = `t`.`iban_partener` limit 1),'Plata/Transfer') ELSE 'Depunere/Incasare' END AS `entitate` FROM (`tranzactii` `t` join `conturi` `c` on(`t`.`id_cont` = `c`.`id_cont`)) ;
 
+-- --------------------------------------------------------
+
+--
+-- Structure for view `v_tranzactii_suspecte`
+--
+DROP TABLE IF EXISTS `v_tranzactii_suspecte`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_tranzactii_suspecte`  AS SELECT `t`.`id_tranzactie` AS `id_tranzactie`, `t`.`id_cont` AS `id_cont`, `t`.`suma` AS `suma`, `t`.`data_tranzactie` AS `data_tranzactie` FROM `tranzactii` AS `t` WHERE `t`.`data_tranzactie` >= current_timestamp() - interval 1 day AND ((select sum(`tranzactii`.`suma`) from `tranzactii` where `tranzactii`.`id_cont` = `t`.`id_cont` AND `tranzactii`.`data_tranzactie` >= current_timestamp() - interval 1 day) > 5000 OR (select count(0) from `tranzactii` where `tranzactii`.`id_cont` = `t`.`id_cont` AND `tranzactii`.`data_tranzactie` >= current_timestamp() - interval 1 day) > 10) ;
+
 --
 -- Indexes for dumped tables
 --
+
+--
+-- Indexes for table `admini`
+--
+ALTER TABLE `admini`
+  ADD PRIMARY KEY (`id_admin`),
+  ADD UNIQUE KEY `email` (`email`);
 
 --
 -- Indexes for table `audit_solduri`
@@ -776,10 +891,16 @@ ALTER TABLE `tranzactii`
 --
 
 --
+-- AUTO_INCREMENT for table `admini`
+--
+ALTER TABLE `admini`
+  MODIFY `id_admin` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
 -- AUTO_INCREMENT for table `audit_solduri`
 --
 ALTER TABLE `audit_solduri`
-  MODIFY `id_audit` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=62;
+  MODIFY `id_audit` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=84;
 
 --
 -- AUTO_INCREMENT for table `beneficiari`
@@ -809,7 +930,7 @@ ALTER TABLE `extrasecont`
 -- AUTO_INCREMENT for table `notificari`
 --
 ALTER TABLE `notificari`
-  MODIFY `id_notificare` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id_notificare` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `tipuricont`
@@ -821,13 +942,13 @@ ALTER TABLE `tipuricont`
 -- AUTO_INCREMENT for table `transferuri`
 --
 ALTER TABLE `transferuri`
-  MODIFY `id_transfer` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id_transfer` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 
 --
 -- AUTO_INCREMENT for table `tranzactii`
 --
 ALTER TABLE `tranzactii`
-  MODIFY `id_tranzactie` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
+  MODIFY `id_tranzactie` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=49;
 
 --
 -- Constraints for dumped tables

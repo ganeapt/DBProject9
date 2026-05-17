@@ -277,3 +277,94 @@ class Admin:
         self.curata_content()
         self.app.add_label(self.content, "DETECTOR DE FRAUDĂ: TRANZACȚII SUSPECTE", type="h1", pady=(10, 20))
         self._add_back_button()
+
+    def afiseaza_frauda(self):
+        """Inițializează pagina de monitorizare fraude folosind layout-ul de la audit."""
+        self.curata_content()
+        self.is_viewing_frauda = True 
+
+        self.app.add_label(self.content, "DETECTOR DE FRAUDĂ: TRANZACȚII SUSPECTE (24H)", type="h1", pady=(10, 20))
+
+        frame_date = ctk.CTkFrame(self.content, fg_color="transparent")
+        frame_date.pack(padx=20, pady=10, fill="both", expand=True)
+
+        stil = ttk.Style()
+        stil.theme_use("clam")
+        
+        stil.configure("Treeview", 
+                       background=self.app.theme["bg_panel"], 
+                       fieldbackground=self.app.theme["bg_panel"], 
+                       foreground=self.app.theme["text_main"],
+                       font=("Roboto", 14), 
+                       rowheight=35)        
+                       
+        stil.configure("Treeview.Heading", 
+                       background=self.app.theme["card_inner"], 
+                       foreground=self.app.theme["text_main"], 
+                       font=("Roboto", 14, "bold"), 
+                       borderwidth=0)
+
+        # Cele 4 coloane care vin direct din VIEW-ul bazei de date
+        coloane = ("ID Tranzacție", "ID Cont", "Sumă", "Dată și Oră")
+        self.tabel_frauda = ttk.Treeview(frame_date, columns=coloane, show="headings")
+        
+        latimi_coloane = {
+            "ID Tranzacție": 150, 
+            "ID Cont": 150, 
+            "Sumă": 200, 
+            "Dată și Oră": 300
+        }
+        
+        for col in coloane:
+            self.tabel_frauda.heading(col, text=col)
+            self.tabel_frauda.column(col, width=latimi_coloane[col], anchor="center")
+            
+        self.tabel_frauda.pack(side="left", fill="both", expand=True)
+
+        scrollbar = ctk.CTkScrollbar(
+            frame_date, 
+            orientation="vertical", 
+            command=self.tabel_frauda.yview,
+            button_color=self.app.theme["btn_accent"],       
+            button_hover_color=self.app.theme["btn_hover"]   
+        )
+        scrollbar.pack(side="right", fill="y")
+        self.tabel_frauda.configure(yscrollcommand=scrollbar.set)
+
+        # Butonul de înapoi aliniat la fel ca la audit
+        bottom_frame = ctk.CTkFrame(self.content, fg_color="transparent")
+        bottom_frame.pack(side="bottom", fill="x", padx=20, pady=(10, 20))
+
+        ctk.CTkButton(
+            bottom_frame, 
+            text="← Înapoi la Dashboard", 
+            command=self.paraseste_frauda,
+            **self.app.styles["btn_back"]
+        ).pack(side="left")
+
+        # Pornim încărcarea live
+        self.extensie_frauda()
+
+    def extensie_frauda(self):
+        """Apelează VIEW-ul din DB la fiecare 3 secunde pentru a afișa alertele AML."""
+        if not self.is_viewing_frauda:
+            return
+
+        for item in self.tabel_frauda.get_children():
+            self.tabel_frauda.delete(item)
+
+        sql = "SELECT id_tranzactie, id_cont, suma, data_tranzactie FROM v_tranzactii_suspecte"
+        rezultat = self.app.ruleaza_query(sql)
+
+        if rezultat:
+            for row in rezultat:
+                data_str = row[3].strftime('%d.%m.%Y %H:%M') if row[3] else ""
+                valori_formate = (row[0], row[1], f"{row[2]:.2f} RON", data_str)
+                self.tabel_frauda.insert("", "end", values=valori_formate)
+
+        self.app.after(3000, self.extensie_frauda)
+
+    def paraseste_frauda(self):
+        """Oprește complet loop-ul de query-uri și revine în dashboard."""
+        self.is_viewing_frauda = False
+        self.afiseaza_dashboard()
