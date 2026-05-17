@@ -1,5 +1,6 @@
 import customtkinter as ctk
 from tkinter import ttk
+from tkinter import messagebox
 
 class Admin:
     def __init__(self, app, admin_id):
@@ -21,9 +22,8 @@ class Admin:
             widget.destroy()
 
     def afiseaza_dashboard(self):
-        """Ecranul principal cu cele 4 butoane mari și Log Out în jos-stânga."""
+        """Ecranul principal."""
         self.curata_content()
-        
 
         ctk.CTkLabel(self.content, text="Admin Dashboard", font=("Roboto", 26, "bold"), text_color=self.app.theme["text_main"]).pack(pady=20)
 
@@ -33,14 +33,11 @@ class Admin:
         btn_audit = ctk.CTkButton(grid_frame, text="Audit Solduri", command=self.afiseaza_audit, **self.app.styles["btn_options"])
         btn_audit.grid(row=0, column=0, padx=15, pady=15)
 
-        btn_gestiune = ctk.CTkButton(grid_frame, text="Blocare Conturi", command=self.afiseaza_gestiune, **self.app.styles["btn_options"])
-        btn_gestiune.grid(row=0, column=1, padx=15, pady=15)
-
         btn_alerte = ctk.CTkButton(grid_frame, text="Trimite Alertă", command=self.afiseaza_alerte, **self.app.styles["btn_options"])
-        btn_alerte.grid(row=1, column=0, padx=15, pady=15)
+        btn_alerte.grid(row=0, column=1, padx=15, pady=15)
 
         btn_frauda = ctk.CTkButton(grid_frame, text="Tranzacții Suspecte", command=self.afiseaza_frauda, **self.app.styles["btn_options"])
-        btn_frauda.grid(row=1, column=1, padx=15, pady=15)
+        btn_frauda.grid(row=0, column=2, padx=15, pady=15)
 
         self.btn_logout = ctk.CTkButton(
             self.content, 
@@ -49,9 +46,7 @@ class Admin:
             hover_color=self.app.theme["danger_hover"], 
             command=self.app.afiseaza_dashboard
         )
-        
         self.btn_logout.pack(side="bottom", anchor="sw", padx=20, pady=(20, 10))
-
 
     def _add_back_button(self):
         """Metodă privată pentru a pune rapid butonul de înapoi."""
@@ -104,6 +99,8 @@ class Admin:
             self.tabel.column(col, width=latimi_coloane[col], anchor="center")
             
         self.tabel.pack(side="left", fill="both", expand=True)
+        self.tabel.tag_configure("Blocat", background=self.app.theme["danger"], foreground=self.app.theme["text_main"])
+        self.tabel.tag_configure("Activ", background=self.app.theme["bg_panel"], foreground=self.app.theme["text_main"])
 
         scrollbar = ctk.CTkScrollbar(
             frame_date, 
@@ -114,20 +111,76 @@ class Admin:
         )
         scrollbar.pack(side="right", fill="y")
         self.tabel.configure(yscrollcommand=scrollbar.set)
+        
+        bottom_frame = ctk.CTkFrame(self.content, fg_color="transparent")
+        bottom_frame.pack(side="bottom", fill="x", padx=20, pady=(10, 20))
 
         ctk.CTkButton(
-            self.content, 
+            bottom_frame, 
             text="← Înapoi la Dashboard", 
             command=self.paraseste_audit,
-            **self.app.styles["btn_back"]
-        ).pack(side="bottom", anchor="sw", padx=20, pady=(10, 20))
+            **self.app.styles["btn_back"],
+        ).pack(side="left")
+
+        ctk.CTkButton(
+            bottom_frame, 
+            text="Deblochează Cont", 
+            fg_color=self.app.theme["success"], 
+            hover_color=self.app.theme["success_hover"], 
+            text_color=self.app.theme["bg_dark"], 
+            font=("Roboto", 14, "bold"), 
+            command=lambda: self.schimba_status_selectat("Activ")
+        ).pack(side="right", padx=(10, 0))
+
+        ctk.CTkButton(
+            bottom_frame, 
+            text="Blochează Cont", 
+            fg_color=self.app.theme["danger"], 
+            hover_color=self.app.theme["danger_hover"], 
+            font=("Roboto", 14, "bold"), 
+            command=lambda: self.schimba_status_selectat("Blocat")
+        ).pack(side="right", padx=(0, 10))
 
         self.incarca_date_audit()
 
+    def schimba_status_selectat(self, noul_status):
+        """Identifică ID Cont din rândul selectat și îi modifică starea în DB."""
+        selectie = self.tabel.selection()
+        
+        if not selectie:
+            messagebox.showwarning("Atenție", "Nu ai selectat niciun rand!")
+            return
+
+        try:
+            valori = self.tabel.item(selectie[0])["values"]
+            if not valori:
+                return
+                
+            id_cont = valori[1]
+
+            self.app.ruleaza_query(
+                "UPDATE conturi SET status = %s WHERE id_cont = %s", 
+                (noul_status, id_cont), 
+                fetch=False
+            )
+            
+            messagebox.showinfo("Succes", f"Contul ID {id_cont} a fost marcat ca fiind '{noul_status}' in baza de date!")
+            
+            self.incarca_date_audit()
+        except Exception as e:
+            messagebox.showerror("Eroare", f"A aparut o problema la comunicarea cu DB: {str(e)}")
+
     def incarca_date_audit(self):
-        """Curăță și inserează rândurile în Treeview direct din DB folosind un query cu JOIN-uri."""
+        """Curăță și inserează rândurile în Treeview."""
         if not self.is_viewing_audit:
             return
+
+        selectie_veche = self.tabel.selection()
+        id_audit_selectat = None
+        if selectie_veche:
+            valori_vechi = self.tabel.item(selectie_veche[0])["values"]
+            if valori_vechi:
+                id_audit_selectat = valori_vechi[0]
 
         for item in self.tabel.get_children():
             self.tabel.delete(item)
@@ -138,7 +191,8 @@ class Admin:
                 a.id_cont, 
                 COALESCE(CONCAT(pf.nume, ' ', pf.prenume), pj.denumire_firma, cl.email) AS nume_complet,
                 a.sold_vechi, 
-                a.sold_nou 
+                a.sold_nou,
+                c.status 
             FROM audit_solduri a
             JOIN conturi c ON a.id_cont = c.id_cont
             JOIN clienti cl ON c.id_client = cl.id_client
@@ -150,7 +204,11 @@ class Admin:
         rezultat = self.app.ruleaza_query(sql)
         if rezultat:
             for row in rezultat:
-                self.tabel.insert("", "end", values=row)
+                item_id = self.tabel.insert("", "end", values=row[:5], tags=(row[5],))
+                
+                if id_audit_selectat and row[0] == id_audit_selectat:
+                    self.tabel.selection_set(item_id)
+                    self.tabel.focus(item_id)
 
         self.app.after(3000, self.incarca_date_audit)
 
@@ -158,11 +216,6 @@ class Admin:
         """Oprește complet loop-ul de query-uri și revine în dashboard."""
         self.is_viewing_audit = False
         self.afiseaza_dashboard()
-
-    def afiseaza_gestiune(self):
-        self.curata_content()
-        self.app.add_label(self.content, "GESTIUNE CONTURI BANCARE", type="h1", pady=(10, 20))
-        self._add_back_button()
 
     def afiseaza_alerte(self):
         self.curata_content()
