@@ -1,0 +1,16 @@
+{
+    "admin": {
+        "host": "127.0.0.1",
+        "port": "3306",
+        "user": "staff_admin",
+        "password": "password",
+        "database": "dbproject9"
+    },
+    "user": {
+        "host": "127.0.0.1",
+        "port": "3306",
+        "user": "client_user",
+        "password": "password",
+        "database": "dbproject9"
+    }
+}
