@@ -1,0 +1,141 @@
+MariaDB [dbproject9]> SELECT 
+    ->     TABLE_NAME AS 'Tabela', 
+    ->     INDEX_NAME AS 'Nume Index', 
+    ->     COLUMN_NAME AS 'Coloana'
+    -> FROM information_schema.STATISTICS
+    -> WHERE TABLE_SCHEMA = 'dbproject9' 
+    ->   AND INDEX_NAME NOT LIKE 'PRIMARY';
++---------------+----------------------+--------------------+
+| Tabela        | Nume Index           | Coloana            |
++---------------+----------------------+--------------------+
+| admini        | email                | email              |
+| audit_solduri | idx_audit_cont       | id_cont            |
+| beneficiari   | fk_beneficiar_client | id_client          |
+| beneficiari   | fk_beneficiar_iban   | iban_beneficiar    |
+| clienti       | email                | email              |
+| conturi       | iban                 | iban               |
+| conturi       | id_tip_cont          | id_tip_cont        |
+| conturi       | idx_client_cont      | id_client          |
+| conturi       | fk_conturi_moneda    | moneda             |
+| detalii_pf    | cnp                  | cnp                |
+| detalii_pj    | cui                  | cui                |
+| extrasecont   | id_cont              | id_cont            |
+| notificari    | id_client            | id_client          |
+| transferuri   | id_cont_sursa        | id_cont_sursa      |
+| transferuri   | id_cont_destinatie   | id_cont_destinatie |
+| transferuri   | idx_data_transfer    | data_transfer      |
+| tranzactii    | id_cont              | id_cont            |
+| tranzactii    | idx_data_tranzactie  | data_tranzactie    |
++---------------+----------------------+--------------------+
+18 rows in set (0.002 sec)
+
+MariaDB [dbproject9]> show index from conturi;
++---------+------------+-------------------+--------------+-------------+-----------+-------------+----------+--------+------+------------+---------+---------------+
+| Table   | Non_unique | Key_name          | Seq_in_index | Column_name | Collation | Cardinality | Sub_part | Packed | Null | Index_type | Comment | Index_comment |
++---------+------------+-------------------+--------------+-------------+-----------+-------------+----------+--------+------+------------+---------+---------------+
+| conturi |          0 | PRIMARY           |            1 | id_cont     | A         |          16 |     NULL | NULL   |      | BTREE      |         |               |
+| conturi |          0 | iban              |            1 | iban        | A         |          16 |     NULL | NULL   |      | BTREE      |         |               |
+| conturi |          1 | id_tip_cont       |            1 | id_tip_cont | A         |           2 |     NULL | NULL   |      | BTREE      |         |               |
+| conturi |          1 | idx_client_cont   |            1 | id_client   | A         |          16 |     NULL | NULL   |      | BTREE      |         |               |
+| conturi |          1 | fk_conturi_moneda |            1 | moneda      | A         |           2 |     NULL | NULL   | YES  | BTREE      |         |               |
++---------+------------+-------------------+--------------+-------------+-----------+-------------+----------+--------+------+------------+---------+---------------+
+5 rows in set (0.001 sec)
+
+MariaDB [dbproject9]> show index from transferuri;
++-------------+------------+--------------------+--------------+--------------------+-----------+-------------+----------+--------+------+------------+---------+---------------+
+| Table       | Non_unique | Key_name           | Seq_in_index | Column_name        | Collation | Cardinality | Sub_part | Packed | Null | Index_type | Comment | Index_comment |
++-------------+------------+--------------------+--------------+--------------------+-----------+-------------+----------+--------+------+------------+---------+---------------+
+| transferuri |          0 | PRIMARY            |            1 | id_transfer        | A         |          23 |     NULL | NULL   |      | BTREE      |         |               |
+| transferuri |          1 | id_cont_sursa      |            1 | id_cont_sursa      | A         |           4 |     NULL | NULL   |      | BTREE      |         |               |
+| transferuri |          1 | id_cont_destinatie |            1 | id_cont_destinatie | A         |          11 |     NULL | NULL   |      | BTREE      |         |               |
+| transferuri |          1 | idx_data_transfer  |            1 | data_transfer      | A         |          23 |     NULL | NULL   |      | BTREE      |         |               |
++-------------+------------+--------------------+--------------+--------------------+-----------+-------------+----------+--------+------+------------+---------+---------------+
+4 rows in set (0.001 sec)
+
+MariaDB [dbproject9]> show index from tranzactii;
++------------+------------+---------------------+--------------+-----------------+-----------+-------------+----------+--------+------+------------+---------+---------------+
+| Table      | Non_unique | Key_name            | Seq_in_index | Column_name     | Collation | Cardinality | Sub_part | Packed | Null | Index_type | Comment | Index_comment |
++------------+------------+---------------------+--------------+-----------------+-----------+-------------+----------+--------+------+------------+---------+---------------+
+| tranzactii |          0 | PRIMARY             |            1 | id_tranzactie   | A         |          48 |     NULL | NULL   |      | BTREE      |         |               |
+| tranzactii |          1 | id_cont             |            1 | id_cont         | A         |          12 |     NULL | NULL   |      | BTREE      |         |               |
+| tranzactii |          1 | idx_data_tranzactie |            1 | data_tranzactie | A         |          48 |     NULL | NULL   |      | BTREE      |         |               |
++------------+------------+---------------------+--------------+-----------------+-----------+-------------+----------+--------+------+------------+---------+---------------+
+3 rows in set (0.001 sec)
+
+MariaDB [dbproject9]> show index from audit_solduri;
++---------------+------------+----------------+--------------+-------------+-----------+-------------+----------+--------+------+------------+---------+---------------+
+| Table         | Non_unique | Key_name       | Seq_in_index | Column_name | Collation | Cardinality | Sub_part | Packed | Null | Index_type | Comment | Index_comment |
++---------------+------------+----------------+--------------+-------------+-----------+-------------+----------+--------+------+------------+---------+---------------+
+| audit_solduri |          0 | PRIMARY        |            1 | id_audit    | A         |          78 |     NULL | NULL   |      | BTREE      |         |               |
+| audit_solduri |          1 | idx_audit_cont |            1 | id_cont     | A         |          11 |     NULL | NULL   | YES  | BTREE      |         |               |
++---------------+------------+----------------+--------------+-------------+-----------+-------------+----------+--------+------+------------+---------+---------------+
+2 rows in set (0.001 sec)
+
+
+
+
+MariaDB [dbproject9]> EXPLAIN SELECT * FROM audit_solduri WHERE id_cont = 1;
++------+-------------+---------------+------+----------------+----------------+---------+-------+------+-------+
+| id   | select_type | table         | type | possible_keys  | key            | key_len | ref   | rows | Extra |
++------+-------------+---------------+------+----------------+----------------+---------+-------+------+-------+
+|    1 | SIMPLE      | audit_solduri | ref  | idx_audit_cont | idx_audit_cont | 5       | const | 42   |       |
++------+-------------+---------------+------+----------------+----------------+---------+-------+------+-------+
+1 row in set (0.001 sec)
+
+Interpretare Plan Execuție – Audit Solduri:
+
+Ce vedem: Coloana type are valoarea ref, iar coloana key indică utilizarea indexului idx_audit_cont.
+
+Concluzie: Indexul custom funcționează perfect. Motorul bazei de date nu caută orbește prin toate înregistrările, ci sare direct la blocurile de memorie asociate contului căutat, reducând drastic timpul de răspuns.
+
+
+
+MariaDB [dbproject9]> EXPLAIN SELECT * FROM v_tranzactii_suspecte;
++------+--------------------+------------+------+-----------------------------+---------+---------+----------------------+------+-------------+
+| id   | select_type        | table      | type | possible_keys               | key     | key_len | ref                  | rows | Extra       |
++------+--------------------+------------+------+-----------------------------+---------+---------+----------------------+------+-------------+
+|    1 | PRIMARY            | t          | ALL  | idx_data_tranzactie         | NULL    | NULL    | NULL                 | 48   | Using where |
+|    4 | DEPENDENT SUBQUERY | tranzactii | ref  | id_cont,idx_data_tranzactie | id_cont | 4       | dbproject9.t.id_cont | 4    | Using where |
+|    3 | DEPENDENT SUBQUERY | tranzactii | ref  | id_cont,idx_data_tranzactie | id_cont | 4       | dbproject9.t.id_cont | 4    | Using where |
++------+--------------------+------------+------+-----------------------------+---------+---------+----------------------+------+-------------+
+3 rows in set (0.002 sec)
+
+Interpretare Plan Execuție – Detecție Fraudă (VIEW):
+
+De ce apare type = ALL pe primul rând: Coloana rows ne arată valoarea 48. Deoarece tabela de tranzacții este aproape goală în acest moment (are doar 48 de rânduri), optimizatorul MariaDB a decis că este mult mai rapid să citească direct cele 48 de rânduri din memoria RAM (Full Table Scan) decât să mai piardă timp deschizând și citind structura arborescentă a indexului de pe disc. Pe un set de date real (bancă cu mii de tranzacții), MariaDB va trece automat la scanare de tip range folosind indexul de dată.
+
+Subquery-urile dependente (Liniile 2 și 3): Pentru regulile de calcul din interiorul VIEW-ului (SUM și COUNT), vedem type = ref și key = id_cont. Asta înseamnă că subquery-urile matematice din spate sunt complet optimizate și rulează instant.
+
+
+
+MariaDB [dbproject9]> EXPLAIN SELECT * FROM conturi WHERE id_client = 1;
++------+-------------+---------+------+-----------------+-----------------+---------+-------+------+-------+
+| id   | select_type | table   | type | possible_keys   | key             | key_len | ref   | rows | Extra |
++------+-------------+---------+------+-----------------+-----------------+---------+-------+------+-------+
+|    1 | SIMPLE      | conturi | ref  | idx_client_cont | idx_client_cont | 4       | const | 1    |       |
++------+-------------+---------+------+-----------------+-----------------+---------+-------+------+-------+
+1 row in set (0.010 sec)
+
+MariaDB [dbproject9]> 
+
+Interpretare Plan Execuție – Găsire Conturi Client:
+
+Ce vedem: Coloana type afișează valoarea ref, iar coloana key indică utilizarea indexului custom idx_client_cont.
+
+Concluzie: Când o funcție din Python (cum ar fi deschiderea aplicației de către un utilizator) are nevoie să afișeze rapid toate conturile deținute de acel client, MariaDB folosește indexul pentru a sări direct la înregistrările lui, eliminând scanarea inutilă a conturilor celorlalți clienți ai băncii.
+
+
+
+MariaDB [dbproject9]> EXPLAIN SELECT * FROM transferuri WHERE data_transfer >= '2026-05-01';
++------+-------------+-------------+------+-------------------+------+---------+------+------+-------------+
+| id   | select_type | table       | type | possible_keys     | key  | key_len | ref  | rows | Extra       |
++------+-------------+-------------+------+-------------------+------+---------+------+------+-------------+
+|    1 | SIMPLE      | transferuri | ALL  | idx_data_transfer | NULL | NULL    | NULL | 23   | Using where |
++------+-------------+-------------+------+-------------------+------+---------+------+------+-------------+
+1 row in set (0.009 sec)
+
+Interpretare Plan Execuție – Filtrare Dată Transfer (idx_data_transfer):
+
+Ce vedem: Coloana possible_keys identifică corect indexul custom idx_data_transfer, dar coloana key rămâne NULL, iar type este ALL.
+
+Explicație pentru profesor: Optimizatorul bazei de date a detectat că tabela transferuri conține în acest moment un volum foarte mic de date (doar 23 de rânduri). Din punct de vedere al costului de execuție, scanarea secvențială directă a celor 23 de rânduri (Full Table Scan) este mai rapidă decât încărcarea indexului arborescent B-Tree de pe disc. Indexul este recunoscut ca fiind util (apare în possible_keys), iar pe o bază de date de producție cu mii de transferuri, tipul de scanare va trece automat din ALL în range.
